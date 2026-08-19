@@ -1,0 +1,29 @@
+{
+  "name": "tarang-call-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Voice AI call intelligence for D2C support teams \u2014 voice agent, transcript, structured insight extraction, analytics.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "npm run corpus && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "corpus": "node scripts/generate-corpus.mjs",
+    "eval": "node scripts/eval-extraction.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@vapi-ai/web": "^2.3.8",
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.1",
+    "@types/react-dom": "^19.1.1",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.8.3"
+  }
+}
