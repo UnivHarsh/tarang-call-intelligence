@@ -48,16 +48,20 @@ You can also skip setup entirely. With no key, extraction falls back to a keywor
 
 ```bash
 npm run dev      # http://localhost:3000
+npm run github   # publish the code
 npm run deploy   # ship it and get a public URL
 ```
+
+`github` renames the branch to `main`, writes an MIT licence in your name, walks you through creating the empty repo, pushes, and records the repo URL so the deployed site carries a **Source** link back to the code. It uses the GitHub CLI if you have it and the browser if you do not.
 
 `deploy` signs you into Vercel if needed, creates the project, copies the keys from `.env.local` into it, and ships a production build. Every step prints the plain `vercel ...` command before running it, so a failure always tells you what to finish by hand.
 
 | Command | What it does |
 |---|---|
 | `npm run setup` | Key → `.env.local` → verify → eval |
-| `npm run dev` | Local dev server |
+| `npm run github` | Licence, branch, repo, push, Source link |
 | `npm run deploy` | Vercel deploy with env vars configured |
+| `npm run dev` | Local dev server |
 | `npm run check-key` | One call to Gemini; says exactly what is broken if anything is |
 | `npm run eval` | Re-run the accuracy eval (starts its own server if needed) |
 | `npm run corpus` | Regenerate the 933-call corpus from seed |
@@ -118,9 +122,9 @@ It writes `public/data/eval-results.json`, and the How it works page renders the
 
 There is a longer version of this list, with the reasoning, on the **How it works** page.
 
-## Deploying
+## Publishing and deploying
 
-`npm run deploy` handles it. If you would rather do it by hand: push to GitHub, import the repo at [vercel.com](https://vercel.com), and add `GEMINI_API_KEY` under Settings → Environment Variables. No build configuration is needed — the build regenerates the corpus from seed rather than trusting the copy in the repo.
+`npm run github` then `npm run deploy`. By hand it is the same thing: create a repo, push, import it at [vercel.com](https://vercel.com), and add `GEMINI_API_KEY` under Settings → Environment Variables. No build configuration is needed — the build regenerates the corpus from seed rather than trusting the copy in the repo.
 
 ## Honest limitations
 
