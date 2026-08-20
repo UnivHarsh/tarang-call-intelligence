@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { EXTRACTION_SCHEMA, EXTRACTION_TOOL_NAME, SYSTEM_PROMPT, buildUserMessage, DEFAULT_MODEL, MODEL_RATES } from "@/lib/prompt";
+import { GoogleGenAI } from "@google/genai";
+import { EXTRACTION_SCHEMA, SYSTEM_PROMPT, buildUserMessage, DEFAULT_MODEL, MODEL_RATES } from "@/lib/prompt";
 import { extractLocally } from "@/lib/extract-local";
 import type { Turn } from "@/lib/types";
 
@@ -25,6 +25,10 @@ interface Body {
  * page can run a real extraction without shipping a credential to every
  * visitor. With no key configured it falls through to the rules engine and
  * says so in the response, rather than failing.
+ *
+ * Output is constrained with Gemini's responseJsonSchema, so the model is
+ * decoding against the schema rather than being asked nicely to produce JSON.
+ * There is no parse-the-prose-with-a-regex step anywhere in this project.
  */
 export async function POST(req: NextRequest) {
   let body: Body;
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
   }
 
   const started = Date.now();
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || body.forceLocal) {
     return NextResponse.json({
@@ -53,52 +57,54 @@ export async function POST(req: NextRequest) {
       extractionCostUsd: 0,
       note: body.forceLocal
         ? "Rules engine requested explicitly."
-        : "No ANTHROPIC_API_KEY is configured, so this ran on the local rules engine. Set the key to run the real extraction.",
+        : "No GEMINI_API_KEY is configured, so this ran on the local rules engine. Set the key to run the real extraction.",
     });
   }
 
   const model = process.env.TARANG_MODEL || DEFAULT_MODEL;
 
   try {
-    const client = new Anthropic({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-    const response = await client.messages.create({
+    const response = await ai.models.generateContent({
       model,
-      max_tokens: 16000,
-      system: SYSTEM_PROMPT,
-      tools: [
-        {
-          name: EXTRACTION_TOOL_NAME,
-          description: "Record the structured insight for exactly one support call.",
-          strict: true,
-          input_schema: EXTRACTION_SCHEMA,
-        },
-      ],
-      tool_choice: { type: "tool", name: EXTRACTION_TOOL_NAME },
-      messages: [{ role: "user", content: buildUserMessage(body) }],
+      contents: buildUserMessage(body),
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        responseJsonSchema: EXTRACTION_SCHEMA,
+        temperature: 0.2,
+        // Generous, because the Flash models spend part of this budget on
+        // internal reasoning before the JSON. Too low and the response comes
+        // back empty rather than truncated, which is a confusing failure.
+        maxOutputTokens: 8192,
+      },
     });
 
-    const block = response.content.find((b) => b.type === "tool_use" && b.name === EXTRACTION_TOOL_NAME);
-    if (!block || block.type !== "tool_use") {
-      return NextResponse.json(
-        { error: "The model did not return a structured record.", stopReason: response.stop_reason },
-        { status: 502 },
+    const text = response.text;
+    if (!text) {
+      throw new Error(
+        `The model returned no text (finishReason: ${response.candidates?.[0]?.finishReason ?? "unknown"}). This usually means maxOutputTokens was exhausted.`,
       );
     }
 
+    const raw = JSON.parse(text) as Record<string, unknown>;
+
+    const usage = response.usageMetadata;
+    const inTok = usage?.promptTokenCount ?? 0;
+    // Reasoning tokens are billed as output, so they belong in the cost figure.
+    const outTok = (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0);
     const rates = MODEL_RATES[model];
-    const cost = rates
-      ? (response.usage.input_tokens / 1e6) * rates.in + (response.usage.output_tokens / 1e6) * rates.out
-      : 0;
+    const cost = rates ? (inTok / 1e6) * rates.in + (outTok / 1e6) * rates.out : 0;
 
     // Attach timestamps to the quotes by matching them back to the transcript.
     // The model returns the text it quoted, not an offset, so the offset is
     // recovered here rather than asking it to count milliseconds.
-    const raw = block.input as Record<string, unknown>;
     const quotes = Array.isArray(raw.quotes)
       ? (raw.quotes as { text: string; tag: string }[]).map((q) => {
-          const hit = body.transcript.find((t) => t.text.trim() === q.text.trim())
-            ?? body.transcript.find((t) => t.text.includes(q.text.slice(0, 40)));
+          const hit =
+            body.transcript.find((t) => t.text.trim() === q.text.trim()) ??
+            body.transcript.find((t) => t.text.includes(q.text.slice(0, 40)));
           return { ...q, tMs: hit?.tMs ?? 0 };
         })
       : [];
@@ -109,20 +115,13 @@ export async function POST(req: NextRequest) {
       model,
       extractionMs: Date.now() - started,
       extractionCostUsd: Number(cost.toFixed(6)),
-      usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-      },
+      freeTier: true,
+      usage: { inputTokens: inTok, outputTokens: outTok },
     });
   } catch (err) {
     // A failed extraction should degrade to the rules engine rather than lose
     // the call. The reason is surfaced so it is visible, not swallowed.
-    const message =
-      err instanceof Anthropic.APIError
-        ? `${err.status ?? "API"}: ${err.message}`
-        : err instanceof Error
-          ? err.message
-          : "Unknown error";
+    const message = err instanceof Error ? err.message : "Unknown error";
 
     return NextResponse.json({
       insight: extractLocally(body),

@@ -47,9 +47,13 @@ export const ASSISTANT_CONFIG = {
     model: "nova-2",
     language: "multi",
   },
+  // Vapi bills this from your Vapi credits by default; you can also connect
+  // your own Google AI Studio key under Integrations in their dashboard.
+  // If Vapi ever rejects this model string, any ID from their Gemini provider
+  // page is a drop-in replacement — nothing else here depends on it.
   model: {
-    provider: "anthropic",
-    model: "claude-haiku-4-5",
+    provider: "google",
+    model: "gemini-2.5-flash",
     temperature: 0.4,
     messages: [{ role: "system", content: ASSISTANT_SYSTEM_PROMPT }],
   },

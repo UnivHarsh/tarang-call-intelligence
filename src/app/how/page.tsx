@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EXTRACTION_SCHEMA, SYSTEM_PROMPT, MODEL_RATES, DEFAULT_MODEL } from "@/lib/prompt";
+import { EXTRACTION_SCHEMA, SYSTEM_PROMPT, MODEL_RATES, DEFAULT_MODEL, FREE_TIER_NOTE } from "@/lib/prompt";
 import { ASSISTANT_SYSTEM_PROMPT } from "@/lib/vapi-assistant";
 import { useStore } from "@/lib/store";
 
@@ -245,8 +245,9 @@ export default function HowPage() {
         <div className="card-title">What it costs to read a call</div>
         <p className="card-sub">
           A call in this corpus averages {avgTurns} turns, which is roughly {estInputTokens.toLocaleString("en-IN")} input
-          tokens with the system prompt, and about {estOutputTokens} output tokens for the record. Rates are
-          Anthropic&rsquo;s published first-party API pricing.
+          tokens with the system prompt, and about {estOutputTokens} output tokens for the record. This project runs on
+          Google AI Studio&rsquo;s free tier, so the real bill is zero — the paid rates below answer the question that
+          matters once a prototype stops being one.
         </p>
 
         <div className="scroll-x">
@@ -268,6 +269,11 @@ export default function HowPage() {
                     <td>
                       {r.label}
                       {id === DEFAULT_MODEL && <span className="chip" style={{ marginLeft: 8 }}>default here</span>}
+                      {r.free && (
+                        <span className="chip" style={{ marginLeft: 6, color: "var(--delta-good)" }}>
+                          free tier
+                        </span>
+                      )}
                       {r.note && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{r.note}</div>}
                     </td>
                     <td className="num" style={{ textAlign: "right" }}>${r.in.toFixed(2)}</td>
@@ -282,10 +288,15 @@ export default function HowPage() {
         </div>
 
         <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 14, maxWidth: "76ch" }}>
+          {FREE_TIER_NOTE}
+        </p>
+
+        <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 10, maxWidth: "76ch" }}>
           For comparison, a human QA analyst reviewing calls to this depth manages roughly 10 to 14 an hour. At ₹350 an
-          hour that is about ₹27 a call, so the model is between two and three orders of magnitude cheaper. The honest
-          framing is not that it replaces the analyst — it is that 100% of calls get read instead of the 2% sample a team
-          can afford, and the analyst&rsquo;s hour moves to the calls the model flagged.
+          hour that is about ₹27 a call, against well under a rupee for the model — roughly two orders of magnitude, and
+          closer to three on the Lite tier. The honest framing is not that it replaces the analyst. It is that 100% of
+          calls get read instead of the 2% sample a team can afford, and the analyst&rsquo;s hour moves to the calls the
+          model flagged.
         </p>
       </div>
 
@@ -423,7 +434,7 @@ export default function HowPage() {
       </div>
 
       <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 24, maxWidth: "76ch" }}>
-        Built with Next.js and TypeScript. Voice by Vapi, extraction by the Anthropic API, charts hand-rolled in SVG so
+        Built with Next.js and TypeScript. Voice by Vapi, extraction by the Gemini API, charts hand-rolled in SVG so
         the colour palette could be held to a colourblind-safe categorical order. {meta?.brandNote}
       </p>
     </>

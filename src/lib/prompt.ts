@@ -9,8 +9,6 @@ import { INTENTS, RESOLUTIONS, ROOT_CAUSES } from "./types";
  * rather than documentation.
  */
 
-export const EXTRACTION_TOOL_NAME = "record_call_insight";
-
 export const EXTRACTION_SCHEMA = {
   type: "object" as const,
   additionalProperties: false,
@@ -62,7 +60,7 @@ export const EXTRACTION_SCHEMA = {
       description: "True if the agent finished the call without transferring to a human.",
     },
     handoffReason: {
-      type: ["string", "null"],
+      anyOf: [{ type: "string" }, { type: "null" }],
       description: "If not contained, why the handoff happened. Null otherwise.",
     },
     escalationRisk: {
@@ -127,17 +125,22 @@ export const EXTRACTION_SCHEMA = {
       },
     },
     productSignal: {
-      type: ["object", "null"],
-      additionalProperties: false,
       description:
         "Only when the call reveals something a product or ops team could act on that is bigger than this one customer. Null is the correct and common answer.",
-      properties: {
-        title: { type: "string", description: "The problem, stated as a fact about the system rather than the customer." },
-        evidence: { type: "string", description: "What in this specific call supports it." },
-        severity: { type: "string", enum: ["low", "medium", "high"] },
-        owner: { type: "string" },
-      },
-      required: ["title", "evidence", "severity", "owner"],
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            title: { type: "string", description: "The problem, stated as a fact about the system rather than the customer." },
+            evidence: { type: "string", description: "What in this specific call supports it." },
+            severity: { type: "string", enum: ["low", "medium", "high"] },
+            owner: { type: "string" },
+          },
+          required: ["title", "evidence", "severity", "owner"],
+        },
+        { type: "null" },
+      ],
     },
     tags: { type: "array", items: { type: "string" }, description: "Two to four lowercase snake_case tags." },
     nextBestAction: {
@@ -177,7 +180,7 @@ How to judge:
 
 7. Quote verbatim. The quotes are read by people deciding whether to trust the rest of the record, so a cleaned-up or translated quote destroys their entire purpose.
 
-Return your answer by calling the ${EXTRACTION_TOOL_NAME} tool exactly once.`;
+Return a single JSON object matching the required schema. No prose before or after it.`;
 
 /** Formats a transcript into the shape the prompt expects. */
 export function renderTranscript(turns: { role: string; text: string; tMs: number }[]) {
@@ -208,12 +211,27 @@ export function buildUserMessage(opts: {
 
 /**
  * Per-call cost of the extraction pass, for the economics table.
- * Rates are USD per million tokens, first-party Anthropic API.
+ * Rates are USD per million tokens on Google's paid tier.
+ *
+ * Every model listed here also has a free tier on Google AI Studio, which is
+ * what this project actually runs on — the paid rates are here to answer the
+ * "what would this cost at real volume" question, which is the one that
+ * matters once a prototype stops being a prototype.
  */
-export const MODEL_RATES: Record<string, { label: string; in: number; out: number; note?: string }> = {
-  "claude-opus-5": { label: "Claude Opus 5", in: 5, out: 25 },
-  "claude-sonnet-5": { label: "Claude Sonnet 5", in: 3, out: 15, note: "intro pricing $2 / $10 through 31 Aug 2026" },
-  "claude-haiku-4-5": { label: "Claude Haiku 4.5", in: 1, out: 5 },
+export const MODEL_RATES: Record<string, { label: string; in: number; out: number; free: boolean; note?: string }> = {
+  "gemini-3.7-flash": {
+    label: "Gemini 3.7 Flash",
+    in: 0.75,
+    out: 3.75,
+    free: true,
+    note: "promotional rate through 31 Dec 2026, then $1.50 / $7.50",
+  },
+  "gemini-2.5-flash": { label: "Gemini 2.5 Flash", in: 0.3, out: 2.5, free: true },
+  "gemini-2.5-flash-lite": { label: "Gemini 2.5 Flash-Lite", in: 0.1, out: 0.4, free: true },
 };
 
-export const DEFAULT_MODEL = "claude-opus-5";
+export const DEFAULT_MODEL = "gemini-3.7-flash";
+
+/** Free-tier ceiling, for the note on the economics table. */
+export const FREE_TIER_NOTE =
+  "Google AI Studio's free tier covers every model above at roughly 15 requests a minute and 1,000+ a day — comfortably more than this project needs.";

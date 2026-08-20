@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    hasAnthropicKey: Boolean(process.env.ANTHROPIC_API_KEY),
+    hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     hasVapiKey: VAPI_CONFIGURED,
     model: process.env.TARANG_MODEL || DEFAULT_MODEL,
   });

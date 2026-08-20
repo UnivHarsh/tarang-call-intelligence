@@ -16,7 +16,7 @@
  * whether the model is earning its cost.
  *
  * Usage:
- *   1. npm run dev            (in another terminal, with ANTHROPIC_API_KEY set)
+ *   1. npm run dev            (in another terminal, with GEMINI_API_KEY set)
  *   2. npm run eval
  *
  * Writes public/data/eval-results.json, which the "How it works" page renders.
@@ -97,8 +97,8 @@ async function main() {
   try {
     const ping = await fetch(`${BASE}/api/health`);
     const health = await ping.json();
-    if (!health.hasAnthropicKey) {
-      console.error("\nThe server has no ANTHROPIC_API_KEY set, so the 'model' column would just be the rules engine.");
+    if (!health.hasGeminiKey) {
+      console.error("\nThe server has no GEMINI_API_KEY set, so the 'model' column would just be the rules engine.");
       console.error("Set the key, restart the dev server, and run this again.\n");
       process.exit(1);
     }

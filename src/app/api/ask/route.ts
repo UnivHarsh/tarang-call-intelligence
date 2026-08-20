@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { CallInsight } from "@/lib/types";
@@ -163,44 +163,43 @@ export async function POST(req: NextRequest) {
   const calls = await loadCorpus();
   const briefing = buildBriefing(calls);
   const evidence = retrieve(calls, question);
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json({
       answer: demoAnswer(question, briefing),
       citations: evidence.slice(0, 3).map((e) => e.id),
       mode: "demo",
-      note: "No ANTHROPIC_API_KEY is configured. This answer was assembled from the same pre-computed aggregates the model would have been given, without the model.",
+      note: "No GEMINI_API_KEY is configured. This answer was assembled from the same pre-computed aggregates the model would have been given, without the model.",
     });
   }
 
   const model = process.env.TARANG_MODEL || DEFAULT_MODEL;
 
   try {
-    const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
       model,
-      max_tokens: 16000,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `Briefing (pre-computed from all ${calls.length} calls):\n${JSON.stringify(briefing, null, 1)}\n\nRetrieved calls relevant to the question:\n${JSON.stringify(evidence, null, 1)}\n\nQuestion: ${question}`,
-        },
-      ],
+      contents: `Briefing (pre-computed from all ${calls.length} calls):\n${JSON.stringify(briefing, null, 1)}\n\nRetrieved calls relevant to the question:\n${JSON.stringify(evidence, null, 1)}\n\nQuestion: ${question}`,
+      config: {
+        systemInstruction: SYSTEM,
+        temperature: 0.3,
+        maxOutputTokens: 8192,
+      },
     });
 
-    const text = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n")
-      .trim();
+    const text = (response.text ?? "").trim();
+    if (!text) {
+      throw new Error(`The model returned no text (finishReason: ${response.candidates?.[0]?.finishReason ?? "unknown"}).`);
+    }
 
     const cited = [...new Set(text.match(/c_\d{4}/g) ?? [])];
+    const usage = response.usageMetadata;
+    const inTok = usage?.promptTokenCount ?? 0;
+    // Reasoning tokens bill as output on the Flash models.
+    const outTok = (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0);
     const rates = MODEL_RATES[model];
-    const cost = rates
-      ? (response.usage.input_tokens / 1e6) * rates.in + (response.usage.output_tokens / 1e6) * rates.out
-      : 0;
+    const cost = rates ? (inTok / 1e6) * rates.in + (outTok / 1e6) * rates.out : 0;
 
     return NextResponse.json({
       answer: text,

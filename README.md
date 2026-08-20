@@ -46,27 +46,33 @@ Then open <http://localhost:3000>. On **Live demo**, hit **Replay a sample call*
 
 ## Turning on the real thing
 
-Copy `.env.example` to `.env.local` and fill in what you have. Every variable is optional and each one lights up a different part independently.
+Copy `.env.example` to `.env.local` and fill in what you have. Both variables are optional and each lights up a different part independently.
 
 ```bash
+# Extraction — server-side only, never reaches the client.
+GEMINI_API_KEY=...
+
 # Voice — the public key is meant to be in the browser bundle.
 NEXT_PUBLIC_VAPI_PUBLIC_KEY=pk_...
-
-# Extraction — server-side only, never reaches the client.
-ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-- **Vapi public key** → the microphone path turns on. The assistant config lives in [`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts) and is passed inline, so you do not need to create an assistant in their dashboard. Vapi's free tier is enough for a demo.
-- **Anthropic key** → real extraction and real Ask answers, instead of the rules engine and the pre-computed aggregates.
+- **Gemini key** → real extraction and real Ask answers, instead of the rules engine and the pre-computed aggregates. Get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — no billing account, no credit card. The whole project fits inside Google AI Studio's free tier.
+- **Vapi public key** → the microphone path turns on. The assistant config lives in [`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts) and is passed inline, so you do not need to create an assistant in their dashboard. Vapi's free credit is enough for a demo.
 
-`GET /api/health` reports which of these a deployment actually has, without revealing anything.
+Check the key works before starting anything:
+
+```bash
+npm run check-key
+```
+
+It makes one small schema-constrained call and tells you exactly what failed if it fails. `GET /api/health` reports which capabilities a deployment has, without revealing anything.
 
 ## Architecture
 
 ```
 browser mic ──▶ Vapi ──▶ transcript ──▶ /api/extract ──▶ CallInsight ──▶ dashboard
-                (agent + STT)              (one LLM pass,      (fixed schema)
-                                            strict schema)
+                (agent + STT)           (one Gemini pass,      (fixed schema)
+                                         schema-constrained)
                                                  │
                                                  └── rules-engine fallback when no key
 ```
@@ -78,12 +84,13 @@ Everything except one model call per call is deterministic code. The aggregation
 | Path | What lives there |
 |---|---|
 | [`src/lib/types.ts`](src/lib/types.ts) | The `CallInsight` schema — the contract everything else reads |
-| [`src/lib/prompt.ts`](src/lib/prompt.ts) | The extraction system prompt and the strict tool schema |
+| [`src/lib/prompt.ts`](src/lib/prompt.ts) | The extraction system prompt and the JSON output schema |
 | [`src/lib/analytics.ts`](src/lib/analytics.ts) | Bucketing, KPIs, the two-proportion z-test, signal clustering |
 | [`src/lib/extract-local.ts`](src/lib/extract-local.ts) | The keyword baseline — keyless fallback and eval control |
 | [`src/components/charts.tsx`](src/components/charts.tsx) | Hand-rolled SVG charts |
 | [`scripts/generate-corpus.mjs`](scripts/generate-corpus.mjs) | Deterministic corpus generator |
 | [`scripts/eval-extraction.mjs`](scripts/eval-extraction.mjs) | Eval harness |
+| [`scripts/check-key.mjs`](scripts/check-key.mjs) | One-call diagnostic for the Gemini key |
 
 ## The corpus is also a test set
 
@@ -92,7 +99,7 @@ Everything except one model call per call is deterministic code. The aggregation
 The harness re-extracts a fixed stratified slice through the real API route and scores field-level agreement against ground truth **and** against the keyword baseline:
 
 ```bash
-npm run dev   # in one terminal, with ANTHROPIC_API_KEY set
+npm run dev   # in one terminal, with GEMINI_API_KEY set
 npm run eval  # in another
 ```
 
@@ -115,17 +122,17 @@ The app is a standard Next.js project and deploys to Vercel with no configuratio
 
 1. Push this repo to GitHub.
 2. On [vercel.com](https://vercel.com), **Add New → Project**, and import the repo.
-3. Add `ANTHROPIC_API_KEY` and `NEXT_PUBLIC_VAPI_PUBLIC_KEY` under **Settings → Environment Variables** (both optional — it deploys fine without them).
+3. Add `GEMINI_API_KEY` and `NEXT_PUBLIC_VAPI_PUBLIC_KEY` under **Settings → Environment Variables** (both optional — it deploys fine without them).
 4. Deploy.
 
 The build runs `npm run corpus` first, so the data is regenerated from seed at build time rather than trusted from the repo.
 
 ## Honest limitations
 
-The calls are synthetic. The language is more consistent than real speech and the ground truth is unrealistically clean, so the eval numbers are a ceiling rather than an estimate. Speech-to-text on code-mixed Hindi and English — especially order numbers over a phone line — is the weak link, not the reasoning. Predicted CSAT has never been checked against a real survey. Live calls are stored in your browser, not a database.
+The calls are synthetic. The language is more consistent than real speech and the ground truth is unrealistically clean, so the eval numbers are a ceiling rather than an estimate. Speech-to-text on code-mixed Hindi and English — especially order numbers over a phone line — is the weak link, not the reasoning. Predicted CSAT has never been checked against a real survey. Live calls are stored in your browser, not a database. And note that Google's free API tier may use submitted content to improve their models, which is fine for a fictional company's synthetic calls and would not be for real customer audio.
 
 The **How it works** page spells all of this out in more detail, including what I would build next.
 
 ---
 
-Built with Next.js, TypeScript, the Anthropic API and Vapi. Kartly is fictional and no real customer data is used anywhere in this project.
+Built with Next.js, TypeScript, the Gemini API and Vapi. Kartly is fictional and no real customer data is used anywhere in this project.

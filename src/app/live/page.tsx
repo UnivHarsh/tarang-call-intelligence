@@ -574,6 +574,13 @@ export default function LivePage() {
         </div>
       </div>
 
+      <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 18, maxWidth: "76ch" }}>
+        If you use the microphone, your audio goes to Vapi for transcription and the transcript goes to Google&rsquo;s
+        Gemini API for extraction. This runs on Google&rsquo;s free API tier, where submitted content may be used to
+        improve their models — fine for a demo about a fictional company, and the reason a real deployment would sit on
+        the paid tier.
+      </p>
+
       {live.length > 0 && (
         <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
           <span>
