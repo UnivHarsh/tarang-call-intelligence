@@ -33,6 +33,8 @@ export interface LiveVoiceCallbacks {
   onPartial: (speaker: "agent" | "customer", text: string) => void;
   /** Mic level 0-1, for the meter. */
   onLevel: (level: number) => void;
+  /** Agent output level 0-1, so the UI can show who is speaking. */
+  onAgentLevel: (level: number) => void;
   onError: (message: string) => void;
 }
 
@@ -66,6 +68,9 @@ export class LiveVoiceSession {
   private playCtx: AudioContext | null = null;
   private playCursor = 0;
   private playing = new Set<AudioBufferSourceNode>();
+  private analyser: AnalyserNode | null = null;
+  private levelTimer: number | null = null;
+  private muted = false;
 
   private turns: Turn[] = [];
   private startedAt = 0;
@@ -144,6 +149,12 @@ export class LiveVoiceSession {
 
     node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
       if (this.stopped || !this.session) return;
+      // Muting drops the audio here rather than gating the mic track, so the
+      // socket stays warm and unmuting is instant.
+      if (this.muted) {
+        this.cb.onLevel(0);
+        return;
+      }
       const pcm = new Int16Array(e.data);
 
       let peak = 0;
@@ -168,11 +179,39 @@ export class LiveVoiceSession {
   }
 
   private async startPlayback() {
-    this.playCtx = new AudioContext({ sampleRate: PLAYBACK_RATE });
+    const ctx = new AudioContext({ sampleRate: PLAYBACK_RATE });
+    this.playCtx = ctx;
     // Autoplay policy: the context may start suspended until a gesture. The
     // call always begins from a click, so resuming here is safe.
-    if (this.playCtx.state === "suspended") await this.playCtx.resume();
-    this.playCursor = this.playCtx.currentTime;
+    if (ctx.state === "suspended") await ctx.resume();
+    this.playCursor = ctx.currentTime;
+
+    // Tap the output so the UI can show that she is the one talking. Reading
+    // the real signal beats inferring it from message timing, which lags.
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.6;
+    analyser.connect(ctx.destination);
+    this.analyser = analyser;
+
+    const bins = new Uint8Array(analyser.frequencyBinCount);
+    const sample = () => {
+      if (this.stopped || !this.analyser) return;
+      this.analyser.getByteTimeDomainData(bins);
+      let peak = 0;
+      for (let i = 0; i < bins.length; i += 2) {
+        const v = Math.abs(bins[i] - 128) / 128;
+        if (v > peak) peak = v;
+      }
+      this.cb.onAgentLevel(peak);
+      this.levelTimer = requestAnimationFrame(sample);
+    };
+    this.levelTimer = requestAnimationFrame(sample);
+  }
+
+  setMuted(muted: boolean) {
+    this.muted = muted;
+    if (muted) this.cb.onLevel(0);
   }
 
   private enqueueAudio(b64: string) {
@@ -189,7 +228,7 @@ export class LiveVoiceSession {
 
     const src = ctx.createBufferSource();
     src.buffer = buffer;
-    src.connect(ctx.destination);
+    src.connect(this.analyser ?? ctx.destination);
 
     // Schedule back to back. Starting every chunk at currentTime would overlap
     // them and produce a stutter; this keeps the speech gapless.
@@ -282,6 +321,10 @@ export class LiveVoiceSession {
     this.flushPending("customer");
     this.flushPlayback();
 
+    if (this.levelTimer !== null) cancelAnimationFrame(this.levelTimer);
+    this.levelTimer = null;
+    this.analyser = null;
+
     try {
       this.session?.close();
     } catch {
@@ -304,6 +347,7 @@ export class LiveVoiceSession {
 
     this.cb.onStatus("closed");
     this.cb.onLevel(0);
+    this.cb.onAgentLevel(0);
     return this.turns;
   }
 }

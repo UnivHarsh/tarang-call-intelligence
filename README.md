@@ -68,7 +68,9 @@ npm run deploy   # ship it and get a public URL
 
 ### The voice
 
-The same Gemini key powers the microphone. On **Live demo**, press *Talk to the agent* and you are in a real conversation — she answers out loud in Hinglish, and if you talk over her she stops mid-sentence like a person would.
+The same Gemini key powers the microphone. On **Live demo**, press the call button and you are in a real conversation — Maya answers out loud in Hinglish, and if you talk over her she stops mid-sentence like a person would.
+
+It is built as a call, not a widget: avatar, ringing state, a running duration, a waveform driven by the actual audio signal on both sides, mute, and a red hang-up. During a call there is exactly one thing on screen; the transcript and the extracted record appear after you hang up.
 
 Your mic is captured as raw 16 kHz PCM in an `AudioWorklet`, streamed over a WebSocket straight to the Gemini Live API; her audio comes back at 24 kHz and is scheduled back-to-back so it does not stutter. Both sides are transcribed by the API, which is what becomes the call record. The browser never sees the API key — [`/api/voice-token`](src/app/api/voice-token/route.ts) mints a single-use token that expires in minutes.
 

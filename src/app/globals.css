@@ -662,3 +662,137 @@ button {
     transition: none !important;
   }
 }
+
+/* --- call stage ---------------------------------------------------------- */
+
+.call-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 30px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* A single soft wash behind the avatar, so the stage reads as a surface with
+   depth rather than another flat card in a stack of flat cards. */
+.call-stage::before {
+  content: "";
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  width: 420px;
+  height: 320px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--series-1) 16%, transparent), transparent 68%);
+  pointer-events: none;
+}
+
+.call-stage > * {
+  position: relative;
+}
+
+.call-ring {
+  position: absolute;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  border: 1.5px solid var(--series-1);
+  animation: call-ring 2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes call-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+
+.call-caption {
+  width: 100%;
+  max-width: 480px;
+  text-align: left;
+  border-radius: 12px;
+  background: var(--surface-2);
+  /* Collapsed rather than merely transparent, so an idle stage is not padded
+     out by a caption box nobody can see. */
+  max-height: 0;
+  margin-top: 0;
+  padding: 0 16px;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 260ms ease, opacity 200ms ease, margin-top 260ms ease, padding 260ms ease;
+}
+
+.call-caption[data-visible="true"] {
+  max-height: 160px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-ring { animation: none; opacity: 0.25; }
+  .call-caption { transition: none; }
+}
+
+/* --- minimal pass -------------------------------------------------------- */
+
+/* Section heading used above a group of cards, replacing a boxed card title
+   where the box was adding a border for no reason. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 30px 0 12px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.012em;
+}
+
+.section-note {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.page-head {
+  padding: 40px 0 26px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 640;
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+
+.page-sub {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 68ch;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.quiet-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-strong);
+}
+
+.quiet-link:hover {
+  color: var(--text-primary);
+}

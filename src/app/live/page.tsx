@@ -6,27 +6,25 @@ import { useStore } from "@/lib/store";
 import type { CallInsight, Turn } from "@/lib/types";
 import { INTENT_LABELS, RESOLUTION_LABELS, ROOT_CAUSE_LABELS } from "@/lib/types";
 import { SentimentBar } from "@/components/charts";
+import { CallStage, type CallPhase } from "@/components/call-stage";
 import { LiveVoiceSession, type VoiceStatus } from "@/lib/live-voice";
 import { VAPI_ASSISTANT_ID, VAPI_CONFIGURED, VAPI_PUBLIC_KEY, ASSISTANT_CONFIG } from "@/lib/vapi-assistant";
 
-type Stage = "idle" | "connecting" | "live" | "extracting" | "done" | "error";
-
-const PIPELINE = [
-  { key: "capture", label: "Capture", detail: "Your mic, streamed as 16 kHz PCM" },
-  { key: "converse", label: "Converse", detail: "Gemini Live answers in voice" },
-  { key: "extract", label: "Extract", detail: "One pass, one structured record" },
-  { key: "aggregate", label: "Aggregate", detail: "Folded into the dashboard" },
-];
+type Source = "voice" | "phone" | "replay" | "paste";
 
 export default function LivePage() {
   const { addLiveCall, live, clearLive, calls, getTranscript } = useStore();
 
-  const [stage, setStage] = useState<Stage>("idle");
+  const [phase, setPhase] = useState<CallPhase>("idle");
+  const [analysing, setAnalysing] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [partial, setPartial] = useState<{ speaker: "agent" | "customer"; text: string } | null>(null);
+  const [caption, setCaption] = useState<{ speaker: "agent" | "customer"; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ insight: CallInsight; meta: Record<string, unknown> } | null>(null);
-  const [level, setLevel] = useState(0);
+  const [micLevel, setMicLevel] = useState(0);
+  const [agentLevel, setAgentLevel] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [seconds, setSeconds] = useState(0);
   const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -35,10 +33,7 @@ export default function LivePage() {
   const vapiRef = useRef<{ stop: () => void } | null>(null);
   const startedAt = useRef(0);
   const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Whether the microphone path is available is a server fact (is a key set?),
-  // so ask rather than guess.
   useEffect(() => {
     fetch("/api/health")
       .then((r) => r.json())
@@ -46,9 +41,12 @@ export default function LivePage() {
       .catch(() => setVoiceReady(false));
   }, []);
 
+  // Call timer, driven off the real start time so it survives a slow render.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [turns, partial]);
+    if (phase !== "live") return;
+    const id = setInterval(() => setSeconds(Math.floor((Date.now() - startedAt.current) / 1000)), 500);
+    return () => clearInterval(id);
+  }, [phase]);
 
   useEffect(
     () => () => {
@@ -63,13 +61,14 @@ export default function LivePage() {
   // Every input path converges here: transcript in, structured record out.
   // ------------------------------------------------------------------
   const runExtraction = useCallback(
-    async (finalTurns: Turn[], source: "voice" | "phone" | "replay" | "paste") => {
+    async (finalTurns: Turn[], source: Source) => {
       if (finalTurns.length === 0) {
-        setStage("idle");
+        setPhase("idle");
         setError("Nothing was said, so there is no call to analyse.");
         return;
       }
-      setStage("extracting");
+      setPhase("ended");
+      setAnalysing(true);
       setError(null);
 
       const durationSec = Math.round((finalTurns[finalTurns.length - 1].tMs + 4000) / 1000);
@@ -108,10 +107,10 @@ export default function LivePage() {
 
         addLiveCall(call, finalTurns);
         setResult({ insight: call, meta: data });
-        setStage("done");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Extraction failed.");
-        setStage("error");
+      } finally {
+        setAnalysing(false);
       }
     },
     [addLiveCall],
@@ -124,19 +123,25 @@ export default function LivePage() {
     setError(null);
     setResult(null);
     setTurns([]);
-    setPartial(null);
-    setStage("connecting");
+    setCaption(null);
+    setSeconds(0);
+    setMuted(false);
+    setPhase("connecting");
     startedAt.current = Date.now();
 
     const session = new LiveVoiceSession({
       onStatus: (s: VoiceStatus) => {
-        if (s === "live") setStage("live");
-        if (s === "error") setStage("error");
+        if (s === "live") {
+          startedAt.current = Date.now();
+          setPhase("live");
+        }
+        if (s === "error") setPhase("idle");
       },
       onTurns: setTurns,
-      onPartial: (speaker, text) => setPartial(text ? { speaker, text } : null),
-      onLevel: setLevel,
-      onError: (m) => setError(m),
+      onPartial: (speaker, text) => setCaption(text ? { speaker, text } : null),
+      onLevel: setMicLevel,
+      onAgentLevel: setAgentLevel,
+      onError: setError,
     });
     voiceRef.current = session;
 
@@ -146,10 +151,10 @@ export default function LivePage() {
       const m = e instanceof Error ? e.message : "Could not start the call.";
       setError(
         /permission|denied|NotAllowed/i.test(m)
-          ? "Microphone permission was denied. Allow it in your browser and try again, or use Replay a sample call."
+          ? "Microphone permission was denied. Allow it in your browser and try again, or replay a sample call below."
           : m,
       );
-      setStage("error");
+      setPhase("idle");
       voiceRef.current = null;
       await session.stop().catch(() => {});
     }
@@ -160,10 +165,18 @@ export default function LivePage() {
     if (!session) return;
     voiceRef.current = null;
     const finalTurns = await session.stop();
-    setPartial(null);
-    setLevel(0);
+    setCaption(null);
+    setMicLevel(0);
+    setAgentLevel(0);
     void runExtraction(finalTurns, "voice");
   }, [runExtraction]);
+
+  const toggleMute = useCallback(() => {
+    setMuted((m) => {
+      voiceRef.current?.setMuted(!m);
+      return !m;
+    });
+  }, []);
 
   // ------------------------------------------------------------------
   // 2. Optional: the same agent over a real phone line, via Vapi.
@@ -172,7 +185,8 @@ export default function LivePage() {
     setError(null);
     setResult(null);
     setTurns([]);
-    setStage("connecting");
+    setSeconds(0);
+    setPhase("connecting");
     startedAt.current = Date.now();
 
     try {
@@ -183,25 +197,26 @@ export default function LivePage() {
 
       vapi.on("call-start", () => {
         startedAt.current = Date.now();
-        setStage("live");
+        setPhase("live");
       });
-      vapi.on("volume-level", (v: number) => setLevel(v));
+      vapi.on("volume-level", (v: number) => setAgentLevel(v));
       vapi.on("message", (msg: { type?: string; role?: string; transcriptType?: string; transcript?: string }) => {
-        if (msg?.type !== "transcript" || !msg.transcript || msg.transcriptType === "partial") return;
-        collected.push({
-          role: msg.role === "assistant" ? "agent" : "customer",
-          text: msg.transcript,
-          tMs: Date.now() - startedAt.current,
-          conf: 0.92,
-        });
+        if (msg?.type !== "transcript" || !msg.transcript) return;
+        const role: Turn["role"] = msg.role === "assistant" ? "agent" : "customer";
+        if (msg.transcriptType === "partial") {
+          setCaption({ speaker: role, text: msg.transcript });
+          return;
+        }
+        collected.push({ role, text: msg.transcript, tMs: Date.now() - startedAt.current, conf: 0.92 });
         setTurns([...collected]);
       });
       vapi.on("error", (e: unknown) => {
         setError(`Voice connection error: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
-        setStage("error");
+        setPhase("idle");
       });
       vapi.on("call-end", () => {
         vapiRef.current = null;
+        setCaption(null);
         void runExtraction(collected, "phone");
       });
 
@@ -210,12 +225,14 @@ export default function LivePage() {
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start the phone call.");
-      setStage("error");
+      setPhase("idle");
     }
   }, [runExtraction]);
 
+  const endPhone = useCallback(() => vapiRef.current?.stop(), []);
+
   // ------------------------------------------------------------------
-  // 3. Replay — a real corpus transcript through the same pipeline.
+  // 3 & 4. Replay a seeded call, or paste your own transcript.
   // ------------------------------------------------------------------
   const startReplay = useCallback(() => {
     const candidates = calls.filter((c) => c.extractedBy === "seed" && c.productSignal);
@@ -225,24 +242,25 @@ export default function LivePage() {
 
     if (!source?.length) {
       setError("Transcripts are still loading in the background — give it a second and try again.");
-      setStage("error");
       return;
     }
 
     setError(null);
     setResult(null);
     setTurns([]);
-    setPartial(null);
-    setStage("live");
+    setSeconds(0);
+    setPhase("live");
     startedAt.current = Date.now();
 
     let i = 0;
     const step = () => {
       if (i >= source.length) {
+        setCaption(null);
         void runExtraction(source, "replay");
         return;
       }
       setTurns(source.slice(0, i + 1));
+      setCaption({ speaker: source[i].role, text: source[i].text });
       i++;
       const gap = i < source.length ? Math.max(220, (source[i].tMs - source[i - 1].tMs) / 6) : 500;
       replayTimer.current = setTimeout(step, Math.min(1400, gap));
@@ -250,9 +268,6 @@ export default function LivePage() {
     step();
   }, [calls, getTranscript, runExtraction]);
 
-  // ------------------------------------------------------------------
-  // 4. Paste — test the extractor on your own text.
-  // ------------------------------------------------------------------
   const runPaste = useCallback(() => {
     const lines = pasteText.split("\n").map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return;
@@ -268,174 +283,212 @@ export default function LivePage() {
     void runExtraction(parsed, "paste");
   }, [pasteText, runExtraction]);
 
-  const stageIndex =
-    stage === "idle" || stage === "error" ? -1
-    : stage === "connecting" ? 0
-    : stage === "live" ? 1
-    : stage === "extracting" ? 2
-    : 3;
-
-  const busy = stage === "connecting" || stage === "live" || stage === "extracting";
-  const inVoiceCall = stage === "live" && voiceRef.current !== null;
+  const inCall = phase === "live" || phase === "connecting";
+  const onPhoneCall = inCall && vapiRef.current !== null;
 
   return (
     <>
-      <section style={{ padding: "30px 0 20px" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 640, letterSpacing: "-0.02em", margin: "0 0 6px" }}>Live demo</h1>
-        <p style={{ color: "var(--text-secondary)", margin: 0, maxWidth: "72ch" }}>
-          Press the button and actually talk to the support agent. She answers out loud, in Hinglish, and interrupts
-          properly if you talk over her. Hang up and the conversation goes through the same extraction the 933 seeded
-          calls went through, landing in the dashboard alongside them.
+      <div className="page-head">
+        <h1 className="page-title">Talk to the agent</h1>
+        <p className="page-sub">
+          A real conversation, out loud, in Hinglish. Interrupt her and she stops mid-sentence. When you hang up the call
+          goes through the same extraction as the {calls.length.toLocaleString("en-IN")} calls in the dashboard, and lands
+          alongside them.
         </p>
-        <p style={{ color: "var(--text-muted)", fontSize: 12.5, marginTop: 10, maxWidth: "72ch" }}>
-          Try: a three-day-late order, a melted packet of butter, or a coupon that will not apply. Argue with her a bit —
-          the extraction picks up escalation and churn risk, and you will only see that if you push.
-        </p>
-      </section>
-
-      {/* Pipeline ------------------------------------------------------- */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 0, flexWrap: "wrap" }}>
-          {PIPELINE.map((p, i) => {
-            const state = stageIndex > i ? "done" : stageIndex === i ? "active" : "todo";
-            return (
-              <div key={p.key} style={{ flex: "1 1 170px", display: "flex", alignItems: "flex-start", gap: 10, padding: "2px 10px 2px 0" }}>
-                <div
-                  style={{
-                    width: 22, height: 22, flex: "none", borderRadius: 999,
-                    display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700,
-                    background: state === "done" ? "var(--good)" : state === "active" ? "var(--series-1)" : "var(--surface-2)",
-                    color: state === "todo" ? "var(--text-muted)" : "#fff",
-                    border: state === "todo" ? "1px solid var(--border)" : "none",
-                    animation: state === "active" ? "pulse 1.4s ease-in-out infinite" : undefined,
-                  }}
-                >
-                  {state === "done" ? "✓" : i + 1}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: state === "todo" ? "var(--text-muted)" : "var(--text-primary)" }}>
-                    {p.label}
-                  </div>
-                  <div style={{ fontSize: 11.5, color: "var(--text-muted)" }}>{p.detail}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 330px), 1fr))", gap: 16, alignItems: "start" }}>
-        {/* Call panel -------------------------------------------------- */}
-        <div className="card">
-          <div className="card-head">
-            <div className="card-title">The call</div>
-            <span className="chip">
-              {stage === "live" ? "on the call" : stage === "connecting" ? "connecting" : stage === "extracting" ? "analysing" : "ready"}
-            </span>
-          </div>
-
-          {voiceReady === false && (
-            <div
-              style={{
-                background: "color-mix(in srgb, var(--warning) 12%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--warning) 40%, transparent)",
-                borderRadius: 8, padding: "10px 12px", fontSize: 12.5,
-                margin: "10px 0 14px", color: "var(--text-secondary)",
-              }}
-            >
-              This deployment has no Gemini key, so the microphone is off. Everything else is live — use{" "}
-              <strong>Replay a sample call</strong> or <strong>Paste a transcript</strong>.
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "14px 0 6px" }}>
-            {inVoiceCall ? (
-              <button className="btn btn-danger" onClick={() => void endVoice()}>
-                Hang up &amp; analyse
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => void startVoice()} disabled={busy || voiceReady !== true}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill="currentColor" />
-                  <path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                Talk to the agent
-              </button>
-            )}
-
-            {VAPI_CONFIGURED && !inVoiceCall && (
-              <button className="btn" onClick={() => void startPhone()} disabled={busy}>
-                Call over telephony
-              </button>
-            )}
-
-            <button className="btn" onClick={startReplay} disabled={busy}>
-              Replay a sample call
-            </button>
-            <button className="btn" onClick={() => setPasteOpen((v) => !v)} disabled={busy}>
-              Paste a transcript
-            </button>
-          </div>
-
-          {pasteOpen && (
-            <div style={{ marginTop: 12 }}>
-              <textarea
-                className="input"
-                rows={7}
-                style={{ fontFamily: "var(--font-mono)", fontSize: 12, resize: "vertical" }}
-                placeholder={"Customer: mera order teen din late hai aur koi update nahi hai\nAgent: main abhi check karti hoon..."}
-                value={pasteText}
-                onChange={(e) => setPasteText(e.target.value)}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
-                <button className="btn btn-primary" onClick={runPaste} disabled={!pasteText.trim()}>
-                  Extract
-                </button>
-                <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
-                  One line per turn. Prefix with Customer: or Agent: — otherwise turns alternate.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {inVoiceCall && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
-              <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>mic</span>
-              <div style={{ flex: 1, height: 6, background: "var(--surface-2)", borderRadius: 3, overflow: "hidden" }}>
-                <div
-                  style={{
-                    width: `${Math.min(100, level * 180)}%`, height: "100%",
-                    background: "var(--series-1)", borderRadius: 3, transition: "width 90ms linear",
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>speak normally</span>
-            </div>
-          )}
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 18, alignItems: "start" }}>
+        <div>
+          <CallStage
+            phase={phase}
+            micLevel={micLevel}
+            agentLevel={agentLevel}
+            seconds={seconds}
+            muted={muted}
+            canCall={voiceReady === true}
+            caption={caption}
+            onStart={startVoice}
+            onEnd={onPhoneCall ? endPhone : () => void endVoice()}
+            onToggleMute={toggleMute}
+          />
 
           {error && (
             <div
               style={{
-                marginTop: 14, padding: "10px 12px", borderRadius: 8,
-                background: "color-mix(in srgb, var(--critical) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--critical) 35%, transparent)",
+                marginTop: 14,
+                padding: "11px 14px",
+                borderRadius: 10,
+                background: "color-mix(in srgb, var(--critical) 9%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--critical) 30%, transparent)",
                 fontSize: 12.5,
+                lineHeight: 1.55,
               }}
             >
               {error}
             </div>
           )}
 
-          <div
-            ref={scrollRef}
-            style={{ marginTop: 16, maxHeight: 420, minHeight: 180, overflowY: "auto", borderTop: "1px solid var(--grid)", paddingTop: 12 }}
-          >
-            {turns.length === 0 && !partial ? (
-              <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "38px 0", textAlign: "center" }}>
-                The transcript appears here as it is spoken.
+          {!inCall && (
+            <>
+              <div style={{ display: "flex", gap: 18, justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}>
+                <button className="quiet-link" onClick={startReplay} disabled={analysing}>
+                  Replay a sample call
+                </button>
+                <button className="quiet-link" onClick={() => setPasteOpen((v) => !v)} disabled={analysing}>
+                  Paste a transcript
+                </button>
+                {VAPI_CONFIGURED && (
+                  <button className="quiet-link" onClick={() => void startPhone()} disabled={analysing}>
+                    Call over telephony
+                  </button>
+                )}
               </div>
-            ) : (
-              <>
+
+              {pasteOpen && (
+                <div className="card" style={{ marginTop: 14 }}>
+                  <textarea
+                    className="input"
+                    rows={6}
+                    style={{ fontFamily: "var(--font-mono)", fontSize: 12, resize: "vertical" }}
+                    placeholder={"Customer: mera order teen din late hai aur koi update nahi hai\nAgent: main abhi check karti hoon..."}
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                  />
+                  <div style={{ display: "flex", gap: 10, marginTop: 10, alignItems: "center" }}>
+                    <button className="btn btn-primary" onClick={runPaste} disabled={!pasteText.trim()}>
+                      Extract
+                    </button>
+                    <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>
+                      One line per turn. Prefix Customer: or Agent:
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 22, lineHeight: 1.6 }}>
+            Your microphone streams from this page to Google&rsquo;s Gemini Live API over a WebSocket, using a single-use
+            token minted server-side — the API key never reaches your browser. On the free tier, submitted content may be
+            used to improve their models.
+          </p>
+        </div>
+
+        {/* Result ------------------------------------------------------ */}
+        <div>
+          {analysing && (
+            <div className="card">
+              <div className="card-title">Reading the call…</div>
+              <div style={{ marginTop: 16 }}>
+                <div className="skeleton" style={{ height: 14, width: "88%", marginBottom: 9 }} />
+                <div className="skeleton" style={{ height: 14, width: "72%", marginBottom: 9 }} />
+                <div className="skeleton" style={{ height: 14, width: "54%" }} />
+              </div>
+            </div>
+          )}
+
+          {!analysing && !result && (
+            <div className="card">
+              <div className="card-title">What comes back</div>
+              <p className="card-sub" style={{ marginBottom: 0, marginTop: 8 }}>
+                Intent, root cause, sentiment arc, resolution, escalation and churn risk, verbatim quotes, and any product
+                signal worth acting on. The same fixed schema every call in the dashboard has.
+              </p>
+            </div>
+          )}
+
+          {!analysing && result && (
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">Extracted record</div>
+                <span className="chip">
+                  {result.meta.extractedBy === "llm" ? String(result.meta.model ?? "model") : "rules engine"}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
+                <div style={{ fontSize: 14.5, lineHeight: 1.55 }}>{result.insight.summary}</div>
+
+                <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))", gap: 14 }}>
+                  {[
+                    ["Intent", INTENT_LABELS[result.insight.primaryIntent] ?? result.insight.primaryIntent],
+                    ["Root cause", ROOT_CAUSE_LABELS[result.insight.rootCause] ?? result.insight.rootCause],
+                    ["Resolution", RESOLUTION_LABELS[result.insight.resolution] ?? result.insight.resolution],
+                    ["Predicted CSAT", `${result.insight.csatPredicted} / 5`],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div className="eyebrow" style={{ fontSize: 10 }}>{label}</div>
+                      <div style={{ fontSize: 13, marginTop: 2 }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <SentimentBar start={result.insight.sentimentStart} end={result.insight.sentimentEnd} />
+
+                <div style={{ borderTop: "1px solid var(--grid)", paddingTop: 14, fontSize: 12.5, color: "var(--text-secondary)" }}>
+                  {result.insight.rootCauseNote}
+                </div>
+
+                {result.insight.quotes?.length > 0 && (
+                  <div>
+                    <div className="eyebrow" style={{ fontSize: 10, marginBottom: 8 }}>Pulled quotes</div>
+                    {result.insight.quotes.map((q, i) => (
+                      <div key={i} style={{ fontSize: 12.5, marginBottom: 10, paddingLeft: 11, boxShadow: "inset 2px 0 0 var(--warning)" }}>
+                        <div>“{q.text}”</div>
+                        <div style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 3 }}>{q.tag}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {result.insight.productSignal && (
+                  <div
+                    style={{
+                      background: "color-mix(in srgb, var(--critical) 7%, transparent)",
+                      border: "1px solid color-mix(in srgb, var(--critical) 26%, transparent)",
+                      borderRadius: 10,
+                      padding: 13,
+                    }}
+                  >
+                    <div className="eyebrow" style={{ fontSize: 10, marginBottom: 5 }}>Product signal raised</div>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{result.insight.productSignal.title}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
+                      {result.insight.productSignal.evidence}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ borderTop: "1px solid var(--grid)", paddingTop: 14 }}>
+                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 5 }}>Next best action</div>
+                  <div style={{ fontSize: 13 }}>{result.insight.nextBestAction}</div>
+                </div>
+
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {typeof result.meta.extractionMs === "number" && Number(result.meta.extractionMs) > 0 && (
+                    <span className="chip">{Math.round(Number(result.meta.extractionMs))} ms</span>
+                  )}
+                  {typeof result.meta.extractionCostUsd === "number" && Number(result.meta.extractionCostUsd) > 0 && (
+                    <span className="chip">${Number(result.meta.extractionCostUsd).toFixed(4)}</span>
+                  )}
+                  <Link className="btn" href="/calls" style={{ padding: "5px 12px", fontSize: 12, marginLeft: "auto" }}>
+                    See it in the dashboard →
+                  </Link>
+                </div>
+
+                {typeof result.meta.note === "string" && (
+                  <div style={{ fontSize: 11.5, color: "var(--text-muted)", borderTop: "1px solid var(--grid)", paddingTop: 12 }}>
+                    {result.meta.note}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Transcript, once there is one worth reading. */}
+          {turns.length > 0 && !inCall && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div className="card-title">Transcript</div>
+              <div style={{ maxHeight: 340, overflowY: "auto", marginTop: 10 }}>
                 {turns.map((t, i) => (
                   <div className="turn" data-role={t.role} key={i}>
                     <div className="turn-meta">
@@ -450,156 +503,24 @@ export default function LivePage() {
                     </div>
                   </div>
                 ))}
-                {partial && (
-                  <div className="turn" data-role={partial.speaker} style={{ opacity: 0.6 }}>
-                    <div className="turn-meta">···</div>
-                    <div className="turn-body">
-                      <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 2, fontWeight: 620 }}>
-                        {partial.speaker === "agent" ? "MAYA" : "YOU"}
-                      </div>
-                      {partial.text}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Result panel ------------------------------------------------ */}
-        <div className="card" style={{ minHeight: 300 }}>
-          <div className="card-head">
-            <div className="card-title">Extracted record</div>
-            {result && (
-              <span className="chip">
-                {result.meta.extractedBy === "llm" ? String(result.meta.model ?? "model") : "rules engine"}
-              </span>
-            )}
-          </div>
-
-          {stage === "extracting" && (
-            <div style={{ padding: "40px 0", textAlign: "center" }}>
-              <div className="skeleton" style={{ height: 16, width: "70%", margin: "0 auto 10px" }} />
-              <div className="skeleton" style={{ height: 16, width: "50%", margin: "0 auto 22px" }} />
-              <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>Reading the call…</div>
-            </div>
-          )}
-
-          {!result && stage !== "extracting" && (
-            <p className="card-sub" style={{ marginTop: 12 }}>
-              Nothing yet. Talk to the agent, replay a sample, or paste a transcript — whichever you pick, the same
-              extraction pass runs and the same schema comes back.
-            </p>
-          )}
-
-          {result && stage === "done" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 10 }}>
-              <div style={{ fontSize: 14, lineHeight: 1.55 }}>{result.insight.summary}</div>
-
-              <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
-                <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>Intent</div>
-                  <div style={{ fontSize: 13 }}>{INTENT_LABELS[result.insight.primaryIntent] ?? result.insight.primaryIntent}</div>
-                </div>
-                <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>Root cause</div>
-                  <div style={{ fontSize: 13 }}>{ROOT_CAUSE_LABELS[result.insight.rootCause] ?? result.insight.rootCause}</div>
-                </div>
-                <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>Resolution</div>
-                  <div style={{ fontSize: 13 }}>{RESOLUTION_LABELS[result.insight.resolution] ?? result.insight.resolution}</div>
-                </div>
-                <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>Predicted CSAT</div>
-                  <div className="num" style={{ fontSize: 17, fontWeight: 640 }}>
-                    {result.insight.csatPredicted}
-                    <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}> / 5</span>
-                  </div>
-                </div>
               </div>
-
-              <SentimentBar start={result.insight.sentimentStart} end={result.insight.sentimentEnd} />
-
-              <div style={{ borderTop: "1px solid var(--grid)", paddingTop: 12, fontSize: 12.5, color: "var(--text-secondary)" }}>
-                {result.insight.rootCauseNote}
-              </div>
-
-              {result.insight.quotes?.length > 0 && (
-                <div>
-                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>Pulled quotes</div>
-                  {result.insight.quotes.map((q, i) => (
-                    <div key={i} style={{ fontSize: 12.5, marginBottom: 8, paddingLeft: 10, boxShadow: "inset 3px 0 0 var(--warning)" }}>
-                      <div>“{q.text}”</div>
-                      <div style={{ color: "var(--text-muted)", fontSize: 11, marginTop: 2 }}>{q.tag}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {result.insight.productSignal && (
-                <div
-                  style={{
-                    background: "color-mix(in srgb, var(--critical) 8%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--critical) 30%, transparent)",
-                    borderRadius: 8, padding: 12,
-                  }}
-                >
-                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 5 }}>Product signal raised</div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{result.insight.productSignal.title}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
-                    {result.insight.productSignal.evidence}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ borderTop: "1px solid var(--grid)", paddingTop: 12 }}>
-                <div className="eyebrow" style={{ fontSize: 10, marginBottom: 4 }}>Next best action</div>
-                <div style={{ fontSize: 13 }}>{result.insight.nextBestAction}</div>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {typeof result.meta.extractionMs === "number" && (
-                  <span className="chip">{Math.round(Number(result.meta.extractionMs))} ms</span>
-                )}
-                {typeof result.meta.extractionCostUsd === "number" && Number(result.meta.extractionCostUsd) > 0 && (
-                  <span className="chip">${Number(result.meta.extractionCostUsd).toFixed(4)}</span>
-                )}
-                <Link className="btn" href="/calls" style={{ padding: "5px 11px", fontSize: 12, marginLeft: "auto" }}>
-                  See it in the dashboard →
-                </Link>
-              </div>
-
-              {typeof result.meta.note === "string" && (
-                <div style={{ fontSize: 11.5, color: "var(--text-muted)", borderTop: "1px solid var(--grid)", paddingTop: 10 }}>
-                  {result.meta.note}
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
 
-      <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 18, maxWidth: "76ch" }}>
-        Your microphone streams straight from this page to Google&rsquo;s Gemini Live API over a WebSocket, using a
-        single-use token minted server-side — the API key never reaches your browser. This runs on Google&rsquo;s free
-        tier, where submitted content may be used to improve their models, which is fine for a demo about a fictional
-        company and the reason a real deployment would sit on the paid tier.
-      </p>
-
-      {live.length > 0 && (
-        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
+      {live.length > 0 && !inCall && (
+        <div style={{ marginTop: 22, display: "flex", alignItems: "center", gap: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
           <span>
             {live.length === 1
               ? "1 call of yours is in the dashboard, stored in this browser only."
               : `${live.length} calls of yours are in the dashboard, stored in this browser only.`}
           </span>
-          <button className="btn" style={{ padding: "4px 10px", fontSize: 12 }} onClick={clearLive}>
+          <button className="quiet-link" onClick={clearLive}>
             Clear them
           </button>
         </div>
       )}
-
-      <style>{`@keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.45 } }`}</style>
     </>
   );
 }
