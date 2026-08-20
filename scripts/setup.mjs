@@ -59,6 +59,25 @@ function writeEnvLocal(vars) {
  * process.execPath is "C:\\Program Files\\nodejs\\node.exe", and a shell splits
  * that on the space and tries to run "C:\\Program".
  */
+/**
+ * readline's question() never settles if stdin has already ended, which hangs
+ * the process instead of failing. Guard the ended case and otherwise race
+ * against close, so a piped or non-interactive run exits cleanly.
+ */
+async function ask(prompt) {
+  if (!input.isTTY && (input.readableEnded || !input.readable)) return "";
+  const rl = readline.createInterface({ input, output });
+  try {
+    const answer = await Promise.race([
+      rl.question(prompt),
+      new Promise((resolve) => rl.once("close", () => resolve(""))),
+    ]);
+    return (answer ?? "").trim();
+  } finally {
+    rl.close();
+  }
+}
+
 function runNode(scriptPath) {
   return new Promise((resolve) => {
     const p = spawn(process.execPath, [scriptPath], { cwd: ROOT, stdio: "inherit" });
@@ -70,13 +89,11 @@ function runNode(scriptPath) {
 console.log(`\n${bold("Tarang setup")}\n`);
 
 const existing = readEnvLocal();
-const rl = readline.createInterface({ input, output });
-
 let key = existing.GEMINI_API_KEY || "";
 
 if (key) {
   console.log(`  Found an existing key in .env.local ending ${dim("..." + key.slice(-4))}`);
-  const keep = (await rl.question("  Keep it? [Y/n] ")).trim().toLowerCase();
+  const keep = (await ask("  Keep it? [Y/n] ")).toLowerCase();
   if (keep === "n") key = "";
   console.log("");
 }
@@ -86,20 +103,17 @@ if (!key) {
   console.log(`  Get one free at ${bold("https://aistudio.google.com/apikey")}`);
   console.log(dim("  (Google account only. No credit card, no billing setup, no subscription.)\n"));
 
-  key = (await rl.question("  Paste the key here: ")).trim();
+  key = await ask("  Paste the key here: ");
 
   if (!key) {
     console.log(`\n  ${yellow("No key entered.")} Nothing was written.`);
     console.log(dim("  The app still runs without one — it just falls back to the keyword engine.\n"));
-    rl.close();
     process.exit(0);
   }
   if (!/^AIza[\w-]{20,}$/.test(key)) {
     console.log(`\n  ${yellow("Heads up:")} Google keys normally start with "AIza". Continuing anyway.`);
   }
 }
-
-rl.close();
 
 writeEnvLocal({ ...existing, GEMINI_API_KEY: key });
 console.log(`\n  ${green("✓")} Wrote .env.local ${dim("(gitignored — this never gets committed)")}\n`);

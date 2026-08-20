@@ -36,6 +36,25 @@ const git = (args, opts = {}) =>
   spawnSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: "pipe", ...opts });
 const gitLoud = (args) => spawnSync("git", args, { cwd: ROOT, stdio: "inherit" });
 
+/**
+ * readline's question() never settles if stdin has already ended, which hangs
+ * the process instead of failing. Guard the ended case and otherwise race
+ * against close, so a piped or non-interactive run exits cleanly.
+ */
+async function ask(prompt) {
+  if (!input.isTTY && (input.readableEnded || !input.readable)) return "";
+  const rl = readline.createInterface({ input, output });
+  try {
+    const answer = await Promise.race([
+      rl.question(prompt),
+      new Promise((resolve) => rl.once("close", () => resolve(""))),
+    ]);
+    return (answer ?? "").trim();
+  } finally {
+    rl.close();
+  }
+}
+
 function hasGh() {
   const r = spawnSync("gh", ["--version"], { stdio: "pipe", shell: WIN, encoding: "utf8" });
   return r.status === 0;
@@ -67,11 +86,9 @@ if (git(["rev-parse", "--is-inside-work-tree"]).status !== 0) {
 let author = git(["config", "user.name"]).stdout.trim();
 
 if (!git(["config", "user.email"]).stdout.trim()) {
-  const rl0 = readline.createInterface({ input, output });
   console.log("  Git needs a name and email to attribute commits.");
-  author = (await rl0.question("  Your name: ")).trim() || "Tarang";
-  const email = (await rl0.question("  Your email: ")).trim() || "noreply@example.com";
-  rl0.close();
+  author = (await ask("  Your name: ")) || "Tarang";
+  const email = (await ask("  Your email: ")) || "noreply@example.com";
   git(["config", "user.name", author]);
   git(["config", "user.email", email]);
   console.log(`  ${green("✓")} Set for this repo only ${dim("(your global git config is untouched)")}\n`);
@@ -119,7 +136,7 @@ if (git(["branch", "--show-current"]).stdout.trim() === "master") {
 if (git(["status", "--porcelain"]).stdout.trim()) {
   console.log("  Committing uncommitted changes…");
   git(["add", "-A"]);
-  git(["commit", "-m", "Update"]);
+  git(["commit", "-m", "Prepare for publish"]);
   console.log(`  ${green("✓")} Committed\n`);
 }
 
@@ -149,9 +166,7 @@ if (remote) {
   console.log(`    5. Click ${bold("Create repository")}\n`);
   console.log(dim("  GitHub then shows you a URL like https://github.com/you/tarang-call-intelligence.git\n"));
 
-  const rl = readline.createInterface({ input, output });
-  const url = (await rl.question("  Paste that URL here: ")).trim();
-  rl.close();
+  const url = await ask("  Paste that URL here: ");
 
   if (!url) {
     console.log(`\n  ${yellow("Nothing pasted.")} Run ${bold("npm run github")} again when the repo exists.\n`);
