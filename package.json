@@ -2,15 +2,17 @@
   "name": "tarang-call-intelligence",
   "version": "1.0.0",
   "private": true,
-  "description": "Voice AI call intelligence for D2C support — voice agent, transcript, structured insight extraction, analytics.",
+  "description": "Voice AI call intelligence for D2C support \u2014 voice agent, transcript, structured insight extraction, analytics.",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "dev": "next dev -p 3000",
+    "deploy": "node scripts/deploy.mjs",
     "build": "npm run corpus && next build",
     "start": "next start",
-    "lint": "next lint",
     "corpus": "node scripts/generate-corpus.mjs",
     "eval": "node scripts/eval-extraction.mjs",
-    "check-key": "node scripts/check-key.mjs"
+    "check-key": "node scripts/check-key.mjs",
+    "lint": "next lint"
   },
   "dependencies": {
     "@google/genai": "^2.18.0",

@@ -33,39 +33,40 @@ Overall predicted CSAT stays flat across all eight weeks. That is deliberate —
 | **Ask** | Plain-English questions over the corpus, answered with citations to individual calls |
 | **How it works** | Architecture, the actual prompt and schema, unit economics, the eval, and what I would not claim |
 
-## Try it without setting anything up
-
-Every path works with zero credentials. With no API key the extraction falls back to a keyword rules engine, clearly labelled as such — the point is that a reviewer sees the real flow rather than a "configure your credentials" screen.
+## Running it
 
 ```bash
 npm install
-npm run dev
+npm run setup
 ```
 
-Then open <http://localhost:3000>. On **Live demo**, hit **Replay a sample call** — a real transcript streams in and goes through the extraction pipeline exactly as a live call would.
+`setup` asks for one thing — a Gemini API key — then writes `.env.local`, proves the key works against the real API, and runs the accuracy eval so the table on the **How it works** page holds measured numbers instead of a placeholder.
 
-## Turning on the real thing
+The key is free from [aistudio.google.com/apikey](https://aistudio.google.com/apikey). A Google account is all it needs: no credit card, no billing setup, no subscription. (Note that Google AI Pro is a consumer chat plan and does *not* include API access — the API free tier is a separate, free thing.) The whole project fits inside that free tier.
 
-Copy `.env.example` to `.env.local` and fill in what you have. Both variables are optional and each lights up a different part independently.
+You can also skip setup entirely. With no key, extraction falls back to a keyword rules engine that is clearly labelled as such, and every screen still works — the point is that a reviewer sees the real flow rather than a "configure your credentials" screen.
 
 ```bash
-# Extraction — server-side only, never reaches the client.
-GEMINI_API_KEY=...
-
-# Voice — the public key is meant to be in the browser bundle.
-NEXT_PUBLIC_VAPI_PUBLIC_KEY=pk_...
+npm run dev      # http://localhost:3000
+npm run deploy   # ship it and get a public URL
 ```
 
-- **Gemini key** → real extraction and real Ask answers, instead of the rules engine and the pre-computed aggregates. Get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — no billing account, no credit card. The whole project fits inside Google AI Studio's free tier.
-- **Vapi public key** → the microphone path turns on. The assistant config lives in [`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts) and is passed inline, so you do not need to create an assistant in their dashboard. Vapi's free credit is enough for a demo.
+`deploy` signs you into Vercel if needed, creates the project, copies the keys from `.env.local` into it, and ships a production build. Every step prints the plain `vercel ...` command before running it, so a failure always tells you what to finish by hand.
 
-Check the key works before starting anything:
+| Command | What it does |
+|---|---|
+| `npm run setup` | Key → `.env.local` → verify → eval |
+| `npm run dev` | Local dev server |
+| `npm run deploy` | Vercel deploy with env vars configured |
+| `npm run check-key` | One call to Gemini; says exactly what is broken if anything is |
+| `npm run eval` | Re-run the accuracy eval (starts its own server if needed) |
+| `npm run corpus` | Regenerate the 933-call corpus from seed |
 
-```bash
-npm run check-key
-```
+### The optional bit: a working microphone
 
-It makes one small schema-constrained call and tells you exactly what failed if it fails. `GET /api/health` reports which capabilities a deployment has, without revealing anything.
+The voice demo needs a [Vapi](https://vapi.ai) account — free starting credit, and the assistant config already lives in [`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts), so there is nothing to build in their dashboard. Copy the **public** key from their dashboard into `.env.local` as `NEXT_PUBLIC_VAPI_PUBLIC_KEY` and re-run `npm run deploy`.
+
+Without it, **Live demo** still runs the full pipeline through *Replay a sample call* and *Paste a transcript*.
 
 ## Architecture
 
@@ -99,9 +100,10 @@ Everything except one model call per call is deterministic code. The aggregation
 The harness re-extracts a fixed stratified slice through the real API route and scores field-level agreement against ground truth **and** against the keyword baseline:
 
 ```bash
-npm run dev   # in one terminal, with GEMINI_API_KEY set
-npm run eval  # in another
+npm run eval
 ```
+
+It reuses a dev server if one is running and otherwise starts and stops its own, so it really is one command.
 
 It writes `public/data/eval-results.json`, and the How it works page renders the table automatically. Scoring against a baseline rather than against chance is the whole point: "91% on intent" means little until you know regexes get 62%.
 
@@ -118,14 +120,7 @@ There is a longer version of this list, with the reasoning, on the **How it work
 
 ## Deploying
 
-The app is a standard Next.js project and deploys to Vercel with no configuration.
-
-1. Push this repo to GitHub.
-2. On [vercel.com](https://vercel.com), **Add New → Project**, and import the repo.
-3. Add `GEMINI_API_KEY` and `NEXT_PUBLIC_VAPI_PUBLIC_KEY` under **Settings → Environment Variables** (both optional — it deploys fine without them).
-4. Deploy.
-
-The build runs `npm run corpus` first, so the data is regenerated from seed at build time rather than trusted from the repo.
+`npm run deploy` handles it. If you would rather do it by hand: push to GitHub, import the repo at [vercel.com](https://vercel.com), and add `GEMINI_API_KEY` under Settings → Environment Variables. No build configuration is needed — the build regenerates the corpus from seed rather than trusting the copy in the repo.
 
 ## Honest limitations
 

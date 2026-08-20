@@ -16,21 +16,97 @@
  * whether the model is earning its cost.
  *
  * Usage:
- *   1. npm run dev            (in another terminal, with GEMINI_API_KEY set)
- *   2. npm run eval
+ *   npm run eval
  *
+ * Reuses a dev server if one is running, otherwise starts and stops its own.
  * Writes public/data/eval-results.json, which the "How it works" page renders.
  */
 
 import fs from "node:fs";
 import path from "node:path";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA = path.join(__dirname, "..", "public", "data");
-const BASE = process.env.TARANG_URL || "http://localhost:3000";
+const ROOT = path.join(__dirname, "..");
+const DATA = path.join(ROOT, "public", "data");
 const LIMIT = Number(process.env.TARANG_EVAL_N || 0);
 const CONCURRENCY = 4;
+
+/** Port used when this script has to bring up its own server. */
+const OWN_PORT = 3123;
+let BASE = process.env.TARANG_URL || "http://localhost:3000";
+let ownServer = null;
+
+async function reachable(url, timeoutMs = 1500) {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetch(`${url}/api/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reuses a dev server if one is already up, and otherwise starts its own on a
+ * different port. Running the eval should be one command, not "open a second
+ * terminal first" — that instruction is where most people stop reading.
+ */
+async function ensureServer() {
+  if (await reachable(BASE)) {
+    console.log(`Using the server already running at ${BASE}\n`);
+    return;
+  }
+
+  console.log(`No server on ${BASE} — starting one on port ${OWN_PORT}…`);
+  ownServer = spawn("npx", ["next", "dev", "-p", String(OWN_PORT)], {
+    cwd: ROOT,
+    stdio: "ignore",
+    shell: process.platform === "win32",
+  });
+
+  BASE = `http://localhost:${OWN_PORT}`;
+
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 1200));
+    if (await reachable(BASE)) {
+      console.log(`Server ready at ${BASE}\n`);
+      return;
+    }
+  }
+  stopServer();
+  throw new Error(`The dev server did not come up on port ${OWN_PORT} within 90s.`);
+}
+
+function stopServer() {
+  if (!ownServer) return;
+  const pid = ownServer.pid;
+  ownServer = null;
+  if (!pid) return;
+  try {
+    if (process.platform === "win32") {
+      // Synchronous on purpose: this also runs from the 'exit' handler, and
+      // process.exit would tear us down before an async spawn ever ran, which
+      // leaves a next dev server holding the port forever.
+      // /T because next dev spawns children that would otherwise be orphaned.
+      spawnSync("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      process.kill(-pid, "SIGTERM");
+    }
+  } catch {
+    /* already gone */
+  }
+}
+
+process.on("exit", stopServer);
+process.on("SIGINT", () => {
+  stopServer();
+  process.exit(130);
+});
 
 /** Field-by-field comparison. Not every field deserves exact-match scoring. */
 const FIELDS = [
@@ -92,21 +168,16 @@ async function main() {
   let ids = meta.evalIds.filter((id) => byId.has(id) && transcripts[id]);
   if (LIMIT > 0) ids = ids.slice(0, LIMIT);
 
-  console.log(`Evaluating ${ids.length} calls against ${BASE}`);
+  await ensureServer();
 
-  try {
-    const ping = await fetch(`${BASE}/api/health`);
-    const health = await ping.json();
-    if (!health.hasGeminiKey) {
-      console.error("\nThe server has no GEMINI_API_KEY set, so the 'model' column would just be the rules engine.");
-      console.error("Set the key, restart the dev server, and run this again.\n");
-      process.exit(1);
-    }
-    console.log(`Server model: ${health.model}\n`);
-  } catch {
-    console.error(`\nCould not reach ${BASE}. Start the dev server first:\n  npm run dev\n`);
+  const health = await (await fetch(`${BASE}/api/health`)).json();
+  if (!health.hasGeminiKey) {
+    console.error("\nNo GEMINI_API_KEY is set, so the 'model' column would just be the rules engine again.");
+    console.error("Run `npm run setup` to add one, then try this again.\n");
     process.exit(1);
   }
+
+  console.log(`Evaluating ${ids.length} calls on ${health.model}\n`);
 
   let done = 0;
   const results = await mapLimit(ids, CONCURRENCY, async (id) => {
@@ -198,6 +269,9 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e);
+  stopServer();
+  console.error(`
+${e instanceof Error ? e.message : e}
+`);
   process.exit(1);
 });
