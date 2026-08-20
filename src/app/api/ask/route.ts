@@ -8,7 +8,8 @@ import {
   emergingIssues, recedingIssues, weekBuckets, distribution, clusterSignals,
   metricCsat, metricContainment, shortDate, inr,
 } from "@/lib/analytics";
-import { DEFAULT_MODEL, MODEL_RATES } from "@/lib/prompt";
+import { MODEL_RATES } from "@/lib/prompt";
+import { modelChain, runWithFallback } from "@/lib/model-chain";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -174,19 +175,19 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const model = process.env.TARANG_MODEL || DEFAULT_MODEL;
-
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model,
-      contents: `Briefing (pre-computed from all ${calls.length} calls):\n${JSON.stringify(briefing, null, 1)}\n\nRetrieved calls relevant to the question:\n${JSON.stringify(evidence, null, 1)}\n\nQuestion: ${question}`,
-      config: {
-        systemInstruction: SYSTEM,
-        temperature: 0.3,
-        maxOutputTokens: 8192,
-      },
-    });
+    const { value: response, model } = await runWithFallback(modelChain(), (m) =>
+      ai.models.generateContent({
+        model: m,
+        contents: `Briefing (pre-computed from all ${calls.length} calls):\n${JSON.stringify(briefing, null, 1)}\n\nRetrieved calls relevant to the question:\n${JSON.stringify(evidence, null, 1)}\n\nQuestion: ${question}`,
+        config: {
+          systemInstruction: SYSTEM,
+          temperature: 0.3,
+          maxOutputTokens: 8192,
+        },
+      }),
+    );
 
     const text = (response.text ?? "").trim();
     if (!text) {

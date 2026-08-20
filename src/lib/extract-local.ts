@@ -116,10 +116,10 @@ export function extractLocally(input: LocalExtractInput): ExtractedFields {
   const amountMatch = all.match(/(\d{2,6})\s*(rupaye|rupees|rs)/);
   const refundAmountInr = refundRequested ? Number(amountMatch?.[1] ?? input.orderValue ?? 0) : 0;
 
-  const COMPETITORS = ["quickcart", "zipp basket", "dailybazaar", "nuvo fresh"];
-  const competitorMentions = COMPETITORS.filter((c) => all.includes(c)).map(
-    (c) => c.replace(/\b\w/g, (m) => m.toUpperCase()),
-  );
+  // Matched case-insensitively but reported in the brand's real casing —
+  // "Quickcart" in a dashboard looks like a different company.
+  const COMPETITORS = ["QuickCart", "Zipp Basket", "DailyBazaar", "Nuvo Fresh"];
+  const competitorMentions = COMPETITORS.filter((c) => all.includes(c.toLowerCase()));
 
   const escalationRisk = Math.min(
     1,

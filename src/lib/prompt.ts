@@ -1,4 +1,8 @@
-import { INTENTS, RESOLUTIONS, ROOT_CAUSES } from "./types";
+import { INTENTS, RESOLUTIONS, ROOT_CAUSES, ROOT_CAUSE_OWNER } from "./types";
+
+/** The real teams. Left free-text, the model invents plausible-sounding owners
+ *  like "warehouse_operations", and signal clustering silently splits in two. */
+const OWNERS = [...new Set(Object.values(ROOT_CAUSE_OWNER))];
 
 /**
  * The extraction contract.
@@ -135,7 +139,7 @@ export const EXTRACTION_SCHEMA = {
             title: { type: "string", description: "The problem, stated as a fact about the system rather than the customer." },
             evidence: { type: "string", description: "What in this specific call supports it." },
             severity: { type: "string", enum: ["low", "medium", "high"] },
-            owner: { type: "string" },
+            owner: { type: "string", enum: OWNERS, description: "The team that can act on this. Must be one of the listed teams." },
           },
           required: ["title", "evidence", "severity", "owner"],
         },
@@ -226,8 +230,20 @@ export const MODEL_RATES: Record<string, { label: string; in: number; out: numbe
     free: true,
     note: "promotional rate through 31 Dec 2026, then $1.50 / $7.50",
   },
-  "gemini-2.5-flash": { label: "Gemini 2.5 Flash", in: 0.3, out: 2.5, free: true },
-  "gemini-2.5-flash-lite": { label: "Gemini 2.5 Flash-Lite", in: 0.1, out: 0.4, free: true },
+  "gemini-3.6-flash": {
+    label: "Gemini 3.6 Flash",
+    in: 0.75,
+    out: 3.75,
+    free: true,
+    note: "same rate as 3.7, measurably slower on this workload",
+  },
+  "gemini-3.5-flash-lite": {
+    label: "Gemini 3.5 Flash-Lite",
+    in: 0.3,
+    out: 2.5,
+    free: true,
+    note: "fastest of the three; thinks less, so it is the weakest on root cause",
+  },
 };
 
 export const DEFAULT_MODEL = "gemini-3.7-flash";

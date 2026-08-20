@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { EXTRACTION_SCHEMA, SYSTEM_PROMPT, buildUserMessage, DEFAULT_MODEL, MODEL_RATES } from "@/lib/prompt";
 import { extractLocally } from "@/lib/extract-local";
+import { modelChain, runWithFallback } from "@/lib/model-chain";
 import type { Turn } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -61,25 +62,25 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const model = process.env.TARANG_MODEL || DEFAULT_MODEL;
-
   try {
     const ai = new GoogleGenAI({ apiKey });
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: buildUserMessage(body),
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        responseMimeType: "application/json",
-        responseJsonSchema: EXTRACTION_SCHEMA,
-        temperature: 0.2,
-        // Generous, because the Flash models spend part of this budget on
-        // internal reasoning before the JSON. Too low and the response comes
-        // back empty rather than truncated, which is a confusing failure.
-        maxOutputTokens: 8192,
-      },
-    });
+    const { value: response, model, skipped } = await runWithFallback(modelChain(), (m) =>
+      ai.models.generateContent({
+        model: m,
+        contents: buildUserMessage(body),
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          responseJsonSchema: EXTRACTION_SCHEMA,
+          temperature: 0.2,
+          // Generous, because the Flash models spend part of this budget on
+          // internal reasoning before the JSON. Too low and the response comes
+          // back empty rather than truncated, which is a confusing failure.
+          maxOutputTokens: 8192,
+        },
+      }),
+    );
 
     const text = response.text;
     if (!text) {
@@ -117,6 +118,10 @@ export async function POST(req: NextRequest) {
       extractionCostUsd: Number(cost.toFixed(6)),
       freeTier: true,
       usage: { inputTokens: inTok, outputTokens: outTok },
+      // Surfaced so a degraded answer never silently passes as the primary one.
+      note: skipped.length
+        ? `${skipped.map((s) => `${s.model} was ${s.reason}`).join("; ")} — served by ${model} instead.`
+        : undefined,
     });
   } catch (err) {
     // A failed extraction should degrade to the rules engine rather than lose
