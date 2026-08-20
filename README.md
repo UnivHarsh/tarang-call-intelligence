@@ -29,7 +29,7 @@ Overall predicted CSAT stays flat across all eight weeks. That is deliberate —
 | **Overview** | Headline metrics, what changed in the last two weeks (with a significance test), volume by root cause, and a normalised city heatmap |
 | **Signals** | Product signals clustered across calls — the handful of things somebody could actually go and fix |
 | **Calls** | All 933 calls, filterable, with the full extracted record and transcript per call |
-| **Live demo** | Talk to the agent, or replay a call, or paste a transcript — all three run the same extraction |
+| **Live demo** | Actually talk to the agent out loud, or replay a call, or paste a transcript — all three run the same extraction |
 | **Ask** | Plain-English questions over the corpus, answered with citations to individual calls |
 | **How it works** | Architecture, the actual prompt and schema, unit economics, the eval, and what I would not claim |
 
@@ -66,20 +66,24 @@ npm run deploy   # ship it and get a public URL
 | `npm run eval` | Re-run the accuracy eval (starts its own server if needed) |
 | `npm run corpus` | Regenerate the 933-call corpus from seed |
 
-### The optional bit: a working microphone
+### The voice
 
-The voice demo needs a [Vapi](https://vapi.ai) account — free starting credit, and the assistant config already lives in [`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts), so there is nothing to build in their dashboard. Copy the **public** key from their dashboard into `.env.local` as `NEXT_PUBLIC_VAPI_PUBLIC_KEY` and re-run `npm run deploy`.
+The same Gemini key powers the microphone. On **Live demo**, press *Talk to the agent* and you are in a real conversation — she answers out loud in Hinglish, and if you talk over her she stops mid-sentence like a person would.
 
-Without it, **Live demo** still runs the full pipeline through *Replay a sample call* and *Paste a transcript*.
+Your mic is captured as raw 16 kHz PCM in an `AudioWorklet`, streamed over a WebSocket straight to the Gemini Live API; her audio comes back at 24 kHz and is scheduled back-to-back so it does not stutter. Both sides are transcribed by the API, which is what becomes the call record. The browser never sees the API key — [`/api/voice-token`](src/app/api/voice-token/route.ts) mints a single-use token that expires in minutes.
+
+`npm run check-key` verifies the voice model separately from the extraction model, because they are different models and can fail independently.
+
+**Optional — real telephony.** The same agent prompt also configures a [Vapi](https://vapi.ai) assistant ([`src/lib/vapi-assistant.ts`](src/lib/vapi-assistant.ts)) if you want an actual phone number people can ring. Add `NEXT_PUBLIC_VAPI_PUBLIC_KEY` and a second button appears. One prompt, two transports.
 
 ## Architecture
 
 ```
-browser mic ──▶ Vapi ──▶ transcript ──▶ /api/extract ──▶ CallInsight ──▶ dashboard
-                (agent + STT)           (one Gemini pass,      (fixed schema)
-                                         schema-constrained)
-                                                 │
-                                                 └── rules-engine fallback when no key
+browser mic ──▶ Gemini Live ──▶ transcript ──▶ /api/extract ──▶ CallInsight ──▶ dashboard
+   16 kHz PCM    speaks back,                  (one Gemini pass,     (fixed schema)
+   over WS       transcribes both sides         schema-constrained)
+                                                        │
+                                                        └── rules fallback when no key
 ```
 
 Everything except one model call per call is deterministic code. The aggregation, the spike detection and the significance testing all run in TypeScript — the model is never asked to do arithmetic over 933 records, only to read one conversation at a time.
@@ -92,6 +96,8 @@ Everything except one model call per call is deterministic code. The aggregation
 | [`src/lib/prompt.ts`](src/lib/prompt.ts) | The extraction system prompt and the JSON output schema |
 | [`src/lib/analytics.ts`](src/lib/analytics.ts) | Bucketing, KPIs, the two-proportion z-test, signal clustering |
 | [`src/lib/extract-local.ts`](src/lib/extract-local.ts) | The keyword baseline — keyless fallback and eval control |
+| [`src/lib/live-voice.ts`](src/lib/live-voice.ts) | Real-time voice: mic capture, streaming, playback, turn assembly |
+| [`src/lib/voice-agent.ts`](src/lib/voice-agent.ts) | The agent's prompt, shared by both voice transports |
 | [`src/components/charts.tsx`](src/components/charts.tsx) | Hand-rolled SVG charts |
 | [`scripts/generate-corpus.mjs`](scripts/generate-corpus.mjs) | Deterministic corpus generator |
 | [`scripts/eval-extraction.mjs`](scripts/eval-extraction.mjs) | Eval harness |
@@ -134,4 +140,4 @@ The **How it works** page spells all of this out in more detail, including what 
 
 ---
 
-Built with Next.js, TypeScript, the Gemini API and Vapi. Kartly is fictional and no real customer data is used anywhere in this project.
+Built with Next.js, TypeScript and the Gemini API (Live for voice, Flash for extraction). Kartly is fictional and no real customer data is used anywhere in this project.

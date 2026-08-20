@@ -6,13 +6,14 @@ import { useStore } from "@/lib/store";
 import type { CallInsight, Turn } from "@/lib/types";
 import { INTENT_LABELS, RESOLUTION_LABELS, ROOT_CAUSE_LABELS } from "@/lib/types";
 import { SentimentBar } from "@/components/charts";
+import { LiveVoiceSession, type VoiceStatus } from "@/lib/live-voice";
 import { VAPI_ASSISTANT_ID, VAPI_CONFIGURED, VAPI_PUBLIC_KEY, ASSISTANT_CONFIG } from "@/lib/vapi-assistant";
 
 type Stage = "idle" | "connecting" | "live" | "extracting" | "done" | "error";
 
 const PIPELINE = [
-  { key: "capture", label: "Capture", detail: "WebRTC audio to the voice agent" },
-  { key: "transcribe", label: "Transcribe", detail: "Streaming multilingual speech-to-text" },
+  { key: "capture", label: "Capture", detail: "Your mic, streamed as 16 kHz PCM" },
+  { key: "converse", label: "Converse", detail: "Gemini Live answers in voice" },
   { key: "extract", label: "Extract", detail: "One pass, one structured record" },
   { key: "aggregate", label: "Aggregate", detail: "Folded into the dashboard" },
 ];
@@ -22,17 +23,28 @@ export default function LivePage() {
 
   const [stage, setStage] = useState<Stage>("idle");
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [partial, setPartial] = useState("");
+  const [partial, setPartial] = useState<{ speaker: "agent" | "customer"; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ insight: CallInsight; meta: Record<string, unknown> } | null>(null);
-  const [volume, setVolume] = useState(0);
+  const [level, setLevel] = useState(0);
+  const [voiceReady, setVoiceReady] = useState<boolean | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
 
+  const voiceRef = useRef<LiveVoiceSession | null>(null);
   const vapiRef = useRef<{ stop: () => void } | null>(null);
-  const startedAt = useRef<number>(0);
+  const startedAt = useRef(0);
   const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Whether the microphone path is available is a server fact (is a key set?),
+  // so ask rather than guess.
+  useEffect(() => {
+    fetch("/api/health")
+      .then((r) => r.json())
+      .then((h) => setVoiceReady(Boolean(h.hasGeminiKey)))
+      .catch(() => setVoiceReady(false));
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -41,18 +53,20 @@ export default function LivePage() {
   useEffect(
     () => () => {
       if (replayTimer.current) clearTimeout(replayTimer.current);
+      void voiceRef.current?.stop();
       vapiRef.current?.stop();
     },
     [],
   );
 
   // ------------------------------------------------------------------
-  // The one place every input path converges: transcript in, record out.
+  // Every input path converges here: transcript in, structured record out.
   // ------------------------------------------------------------------
   const runExtraction = useCallback(
-    async (finalTurns: Turn[], source: "live" | "replay" | "paste") => {
+    async (finalTurns: Turn[], source: "voice" | "phone" | "replay" | "paste") => {
       if (finalTurns.length === 0) {
         setStage("idle");
+        setError("Nothing was said, so there is no call to analyse.");
         return;
       }
       setStage("extracting");
@@ -69,21 +83,20 @@ export default function LivePage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? `Extraction failed (${res.status})`);
 
-        const id = `live_${Date.now().toString(36)}`;
+        const name =
+          source === "voice" ? "You (live call)"
+          : source === "phone" ? "You (phone call)"
+          : source === "replay" ? "Replayed call"
+          : "Pasted transcript";
+
         const call: CallInsight = {
-          id,
+          id: `live_${Date.now().toString(36)}`,
           startedAt: new Date(startedAt.current || Date.now()).toISOString(),
           durationSec,
           direction: "inbound",
           handledBy: data.insight.contained ? "voice_agent" : "human_agent",
           language: "hinglish",
-          customer: {
-            id: "live",
-            name: source === "live" ? "You (live call)" : source === "replay" ? "Replayed call" : "Pasted transcript",
-            city: "Bengaluru",
-            segment: "growing",
-            lifetimeOrders: 7,
-          },
+          customer: { id: "live", name, city: "Bengaluru", segment: "growing", lifetimeOrders: 7 },
           order: null,
           transcript: finalTurns,
           asrWer: 0.08,
@@ -105,13 +118,60 @@ export default function LivePage() {
   );
 
   // ------------------------------------------------------------------
-  // 1. Real voice call
+  // 1. Real voice, in the browser, over the Gemini Live API.
   // ------------------------------------------------------------------
-  const startCall = useCallback(async () => {
+  const startVoice = useCallback(async () => {
     setError(null);
     setResult(null);
     setTurns([]);
-    setPartial("");
+    setPartial(null);
+    setStage("connecting");
+    startedAt.current = Date.now();
+
+    const session = new LiveVoiceSession({
+      onStatus: (s: VoiceStatus) => {
+        if (s === "live") setStage("live");
+        if (s === "error") setStage("error");
+      },
+      onTurns: setTurns,
+      onPartial: (speaker, text) => setPartial(text ? { speaker, text } : null),
+      onLevel: setLevel,
+      onError: (m) => setError(m),
+    });
+    voiceRef.current = session;
+
+    try {
+      await session.start();
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Could not start the call.";
+      setError(
+        /permission|denied|NotAllowed/i.test(m)
+          ? "Microphone permission was denied. Allow it in your browser and try again, or use Replay a sample call."
+          : m,
+      );
+      setStage("error");
+      voiceRef.current = null;
+      await session.stop().catch(() => {});
+    }
+  }, []);
+
+  const endVoice = useCallback(async () => {
+    const session = voiceRef.current;
+    if (!session) return;
+    voiceRef.current = null;
+    const finalTurns = await session.stop();
+    setPartial(null);
+    setLevel(0);
+    void runExtraction(finalTurns, "voice");
+  }, [runExtraction]);
+
+  // ------------------------------------------------------------------
+  // 2. Optional: the same agent over a real phone line, via Vapi.
+  // ------------------------------------------------------------------
+  const startPhone = useCallback(async () => {
+    setError(null);
+    setResult(null);
+    setTurns([]);
     setStage("connecting");
     startedAt.current = Date.now();
 
@@ -119,74 +179,45 @@ export default function LivePage() {
       const { default: Vapi } = await import("@vapi-ai/web");
       const vapi = new Vapi(VAPI_PUBLIC_KEY);
       vapiRef.current = vapi;
-
       const collected: Turn[] = [];
 
       vapi.on("call-start", () => {
         startedAt.current = Date.now();
         setStage("live");
       });
-
-      vapi.on("volume-level", (v: number) => setVolume(v));
-
+      vapi.on("volume-level", (v: number) => setLevel(v));
       vapi.on("message", (msg: { type?: string; role?: string; transcriptType?: string; transcript?: string }) => {
-        if (msg?.type !== "transcript" || !msg.transcript) return;
-        const role: Turn["role"] = msg.role === "assistant" ? "agent" : "customer";
-
-        if (msg.transcriptType === "partial") {
-          setPartial(`${role === "agent" ? "Maya" : "You"}: ${msg.transcript}`);
-          return;
-        }
-        // Only final transcripts land in the record. Partials exist to make the
-        // UI feel live; extracting from them would double-count corrections.
-        const turn: Turn = {
-          role,
+        if (msg?.type !== "transcript" || !msg.transcript || msg.transcriptType === "partial") return;
+        collected.push({
+          role: msg.role === "assistant" ? "agent" : "customer",
           text: msg.transcript,
           tMs: Date.now() - startedAt.current,
           conf: 0.92,
-        };
-        collected.push(turn);
-        setPartial("");
+        });
         setTurns([...collected]);
       });
-
       vapi.on("error", (e: unknown) => {
-        const m = e instanceof Error ? e.message : typeof e === "string" ? e : JSON.stringify(e);
-        setError(`Voice connection error: ${m}`);
+        setError(`Voice connection error: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
         setStage("error");
       });
-
       vapi.on("call-end", () => {
-        setPartial("");
-        void runExtraction(collected, "live");
+        vapiRef.current = null;
+        void runExtraction(collected, "phone");
       });
 
       await vapi.start(
-        VAPI_ASSISTANT_ID
-          ? VAPI_ASSISTANT_ID
-          : (ASSISTANT_CONFIG as unknown as Parameters<typeof vapi.start>[0]),
+        VAPI_ASSISTANT_ID ? VAPI_ASSISTANT_ID : (ASSISTANT_CONFIG as unknown as Parameters<typeof vapi.start>[0]),
       );
     } catch (e) {
-      const m = e instanceof Error ? e.message : "Could not start the call.";
-      setError(
-        m.toLowerCase().includes("permission") || m.toLowerCase().includes("denied")
-          ? "Microphone permission was denied. Allow it in your browser, or use Replay a sample call below."
-          : m,
-      );
+      setError(e instanceof Error ? e.message : "Could not start the phone call.");
       setStage("error");
     }
   }, [runExtraction]);
 
-  const endCall = useCallback(() => {
-    vapiRef.current?.stop();
-  }, []);
-
   // ------------------------------------------------------------------
-  // 2. Replay — streams a real corpus transcript through the same pipeline.
-  //    No microphone, no keys, same extraction call at the end.
+  // 3. Replay — a real corpus transcript through the same pipeline.
   // ------------------------------------------------------------------
   const startReplay = useCallback(() => {
-    // Transcripts live in the lazily-fetched payload, not on the index record.
     const candidates = calls.filter((c) => c.extractedBy === "seed" && c.productSignal);
     if (!candidates.length) return;
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
@@ -201,20 +232,18 @@ export default function LivePage() {
     setError(null);
     setResult(null);
     setTurns([]);
-    setPartial("");
+    setPartial(null);
     setStage("live");
     startedAt.current = Date.now();
 
     let i = 0;
     const step = () => {
       if (i >= source.length) {
-        setPartial("");
         void runExtraction(source, "replay");
         return;
       }
       setTurns(source.slice(0, i + 1));
       i++;
-      // Compressed 6x — a faithful 3-minute replay is not a demo.
       const gap = i < source.length ? Math.max(220, (source[i].tMs - source[i - 1].tMs) / 6) : 500;
       replayTimer.current = setTimeout(step, Math.min(1400, gap));
     };
@@ -222,21 +251,16 @@ export default function LivePage() {
   }, [calls, getTranscript, runExtraction]);
 
   // ------------------------------------------------------------------
-  // 3. Paste — for reviewers who want to test the extractor on their own text.
+  // 4. Paste — test the extractor on your own text.
   // ------------------------------------------------------------------
   const runPaste = useCallback(() => {
-    const lines = pasteText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const lines = pasteText.split("\n").map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return;
-
     const parsed: Turn[] = lines.map((line, i) => {
       const m = line.match(/^(agent|maya|customer|caller|you)\s*[:\-]\s*(.*)$/i);
       const role: Turn["role"] = m ? (/agent|maya/i.test(m[1]) ? "agent" : "customer") : i % 2 === 0 ? "customer" : "agent";
       return { role, text: m ? m[2] : line, tMs: i * 6000, conf: 0.95 };
     });
-
     setTurns(parsed);
     setResult(null);
     startedAt.current = Date.now();
@@ -245,18 +269,27 @@ export default function LivePage() {
   }, [pasteText, runExtraction]);
 
   const stageIndex =
-    stage === "idle" || stage === "error" ? -1 : stage === "connecting" ? 0 : stage === "live" ? 1 : stage === "extracting" ? 2 : 3;
+    stage === "idle" || stage === "error" ? -1
+    : stage === "connecting" ? 0
+    : stage === "live" ? 1
+    : stage === "extracting" ? 2
+    : 3;
 
   const busy = stage === "connecting" || stage === "live" || stage === "extracting";
+  const inVoiceCall = stage === "live" && voiceRef.current !== null;
 
   return (
     <>
       <section style={{ padding: "30px 0 20px" }}>
         <h1 style={{ fontSize: 22, fontWeight: 640, letterSpacing: "-0.02em", margin: "0 0 6px" }}>Live demo</h1>
         <p style={{ color: "var(--text-secondary)", margin: 0, maxWidth: "72ch" }}>
-          Talk to the support agent the way a customer would — try a delayed order, a melted packet of butter, a coupon
-          that will not apply. When you hang up, the transcript goes through the same extraction the 933 seeded calls
-          went through, and the result lands in the dashboard alongside them.
+          Press the button and actually talk to the support agent. She answers out loud, in Hinglish, and interrupts
+          properly if you talk over her. Hang up and the conversation goes through the same extraction the 933 seeded
+          calls went through, landing in the dashboard alongside them.
+        </p>
+        <p style={{ color: "var(--text-muted)", fontSize: 12.5, marginTop: 10, maxWidth: "72ch" }}>
+          Try: a three-day-late order, a melted packet of butter, or a coupon that will not apply. Argue with her a bit —
+          the extraction picks up escalation and churn risk, and you will only see that if you push.
         </p>
       </section>
 
@@ -269,14 +302,8 @@ export default function LivePage() {
               <div key={p.key} style={{ flex: "1 1 170px", display: "flex", alignItems: "flex-start", gap: 10, padding: "2px 10px 2px 0" }}>
                 <div
                   style={{
-                    width: 22,
-                    height: 22,
-                    flex: "none",
-                    borderRadius: 999,
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 11,
-                    fontWeight: 700,
+                    width: 22, height: 22, flex: "none", borderRadius: 999,
+                    display: "grid", placeItems: "center", fontSize: 11, fontWeight: 700,
                     background: state === "done" ? "var(--good)" : state === "active" ? "var(--series-1)" : "var(--surface-2)",
                     color: state === "todo" ? "var(--text-muted)" : "#fff",
                     border: state === "todo" ? "1px solid var(--border)" : "none",
@@ -303,47 +330,45 @@ export default function LivePage() {
           <div className="card-head">
             <div className="card-title">The call</div>
             <span className="chip">
-              {stage === "live" ? "connected" : stage === "connecting" ? "connecting" : stage === "extracting" ? "analysing" : "ready"}
+              {stage === "live" ? "on the call" : stage === "connecting" ? "connecting" : stage === "extracting" ? "analysing" : "ready"}
             </span>
           </div>
 
-          {!VAPI_CONFIGURED && (
+          {voiceReady === false && (
             <div
               style={{
                 background: "color-mix(in srgb, var(--warning) 12%, transparent)",
                 border: "1px solid color-mix(in srgb, var(--warning) 40%, transparent)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 12.5,
-                margin: "10px 0 14px",
-                color: "var(--text-secondary)",
+                borderRadius: 8, padding: "10px 12px", fontSize: 12.5,
+                margin: "10px 0 14px", color: "var(--text-secondary)",
               }}
             >
-              No voice key is configured on this deployment, so the microphone path is off. Everything else here is live —
-              use <strong>Replay a sample call</strong> or <strong>Paste a transcript</strong> and the extraction runs for
-              real.
+              This deployment has no Gemini key, so the microphone is off. Everything else is live — use{" "}
+              <strong>Replay a sample call</strong> or <strong>Paste a transcript</strong>.
             </div>
           )}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "14px 0 6px" }}>
-            {stage === "live" && vapiRef.current ? (
-              <button className="btn btn-danger" onClick={endCall}>
-                End call
+            {inVoiceCall ? (
+              <button className="btn btn-danger" onClick={() => void endVoice()}>
+                Hang up &amp; analyse
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={startCall} disabled={!VAPI_CONFIGURED || busy}>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 999,
-                    background: "currentColor",
-                    display: "inline-block",
-                  }}
-                />
-                Start a voice call
+              <button className="btn btn-primary" onClick={() => void startVoice()} disabled={busy || voiceReady !== true}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill="currentColor" />
+                  <path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                Talk to the agent
               </button>
             )}
+
+            {VAPI_CONFIGURED && !inVoiceCall && (
+              <button className="btn" onClick={() => void startPhone()} disabled={busy}>
+                Call over telephony
+              </button>
+            )}
+
             <button className="btn" onClick={startReplay} disabled={busy}>
               Replay a sample call
             </button>
@@ -373,29 +398,25 @@ export default function LivePage() {
             </div>
           )}
 
-          {stage === "live" && vapiRef.current && (
+          {inVoiceCall && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
               <span style={{ fontSize: 11.5, color: "var(--text-muted)" }}>mic</span>
               <div style={{ flex: 1, height: 6, background: "var(--surface-2)", borderRadius: 3, overflow: "hidden" }}>
                 <div
                   style={{
-                    width: `${Math.min(100, volume * 220)}%`,
-                    height: "100%",
-                    background: "var(--series-1)",
-                    borderRadius: 3,
-                    transition: "width 90ms linear",
+                    width: `${Math.min(100, level * 180)}%`, height: "100%",
+                    background: "var(--series-1)", borderRadius: 3, transition: "width 90ms linear",
                   }}
                 />
               </div>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>speak normally</span>
             </div>
           )}
 
           {error && (
             <div
               style={{
-                marginTop: 14,
-                padding: "10px 12px",
-                borderRadius: 8,
+                marginTop: 14, padding: "10px 12px", borderRadius: 8,
                 background: "color-mix(in srgb, var(--critical) 10%, transparent)",
                 border: "1px solid color-mix(in srgb, var(--critical) 35%, transparent)",
                 fontSize: 12.5,
@@ -407,14 +428,7 @@ export default function LivePage() {
 
           <div
             ref={scrollRef}
-            style={{
-              marginTop: 16,
-              maxHeight: 420,
-              minHeight: 180,
-              overflowY: "auto",
-              borderTop: "1px solid var(--grid)",
-              paddingTop: 12,
-            }}
+            style={{ marginTop: 16, maxHeight: 420, minHeight: 180, overflowY: "auto", borderTop: "1px solid var(--grid)", paddingTop: 12 }}
           >
             {turns.length === 0 && !partial ? (
               <div style={{ color: "var(--text-muted)", fontSize: 13, padding: "38px 0", textAlign: "center" }}>
@@ -430,15 +444,21 @@ export default function LivePage() {
                     </div>
                     <div className="turn-body">
                       <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 2, fontWeight: 620 }}>
-                        {t.role === "agent" ? "MAYA" : "CUSTOMER"}
+                        {t.role === "agent" ? "MAYA" : "YOU"}
                       </div>
                       {t.text}
                     </div>
                   </div>
                 ))}
                 {partial && (
-                  <div style={{ fontSize: 12.5, color: "var(--text-muted)", fontStyle: "italic", padding: "6px 0 0 62px" }}>
-                    {partial}…
+                  <div className="turn" data-role={partial.speaker} style={{ opacity: 0.6 }}>
+                    <div className="turn-meta">···</div>
+                    <div className="turn-body">
+                      <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 2, fontWeight: 620 }}>
+                        {partial.speaker === "agent" ? "MAYA" : "YOU"}
+                      </div>
+                      {partial.text}
+                    </div>
                   </div>
                 )}
               </>
@@ -467,8 +487,8 @@ export default function LivePage() {
 
           {!result && stage !== "extracting" && (
             <p className="card-sub" style={{ marginTop: 12 }}>
-              Nothing yet. Start a call, replay a sample, or paste a transcript — whichever you pick, the same extraction
-              pass runs and the same schema comes back.
+              Nothing yet. Talk to the agent, replay a sample, or paste a transcript — whichever you pick, the same
+              extraction pass runs and the same schema comes back.
             </p>
           )}
 
@@ -478,27 +498,19 @@ export default function LivePage() {
 
               <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12 }}>
                 <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>
-                    Intent
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10 }}>Intent</div>
                   <div style={{ fontSize: 13 }}>{INTENT_LABELS[result.insight.primaryIntent] ?? result.insight.primaryIntent}</div>
                 </div>
                 <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>
-                    Root cause
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10 }}>Root cause</div>
                   <div style={{ fontSize: 13 }}>{ROOT_CAUSE_LABELS[result.insight.rootCause] ?? result.insight.rootCause}</div>
                 </div>
                 <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>
-                    Resolution
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10 }}>Resolution</div>
                   <div style={{ fontSize: 13 }}>{RESOLUTION_LABELS[result.insight.resolution] ?? result.insight.resolution}</div>
                 </div>
                 <div>
-                  <div className="eyebrow" style={{ fontSize: 10 }}>
-                    Predicted CSAT
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10 }}>Predicted CSAT</div>
                   <div className="num" style={{ fontSize: 17, fontWeight: 640 }}>
                     {result.insight.csatPredicted}
                     <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}> / 5</span>
@@ -514,9 +526,7 @@ export default function LivePage() {
 
               {result.insight.quotes?.length > 0 && (
                 <div>
-                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>
-                    Pulled quotes
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>Pulled quotes</div>
                   {result.insight.quotes.map((q, i) => (
                     <div key={i} style={{ fontSize: 12.5, marginBottom: 8, paddingLeft: 10, boxShadow: "inset 3px 0 0 var(--warning)" }}>
                       <div>“{q.text}”</div>
@@ -531,13 +541,10 @@ export default function LivePage() {
                   style={{
                     background: "color-mix(in srgb, var(--critical) 8%, transparent)",
                     border: "1px solid color-mix(in srgb, var(--critical) 30%, transparent)",
-                    borderRadius: 8,
-                    padding: 12,
+                    borderRadius: 8, padding: 12,
                   }}
                 >
-                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 5 }}>
-                    Product signal raised
-                  </div>
+                  <div className="eyebrow" style={{ fontSize: 10, marginBottom: 5 }}>Product signal raised</div>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{result.insight.productSignal.title}</div>
                   <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
                     {result.insight.productSignal.evidence}
@@ -546,9 +553,7 @@ export default function LivePage() {
               )}
 
               <div style={{ borderTop: "1px solid var(--grid)", paddingTop: 12 }}>
-                <div className="eyebrow" style={{ fontSize: 10, marginBottom: 4 }}>
-                  Next best action
-                </div>
+                <div className="eyebrow" style={{ fontSize: 10, marginBottom: 4 }}>Next best action</div>
                 <div style={{ fontSize: 13 }}>{result.insight.nextBestAction}</div>
               </div>
 
@@ -575,14 +580,14 @@ export default function LivePage() {
       </div>
 
       <p style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 18, maxWidth: "76ch" }}>
-        If you use the microphone, your audio goes to Vapi for transcription and the transcript goes to Google&rsquo;s
-        Gemini API for extraction. This runs on Google&rsquo;s free API tier, where submitted content may be used to
-        improve their models — fine for a demo about a fictional company, and the reason a real deployment would sit on
-        the paid tier.
+        Your microphone streams straight from this page to Google&rsquo;s Gemini Live API over a WebSocket, using a
+        single-use token minted server-side — the API key never reaches your browser. This runs on Google&rsquo;s free
+        tier, where submitted content may be used to improve their models, which is fine for a demo about a fictional
+        company and the reason a real deployment would sit on the paid tier.
       </p>
 
       {live.length > 0 && (
-        <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
+        <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12, fontSize: 12.5, color: "var(--text-muted)" }}>
           <span>
             {live.length === 1
               ? "1 call of yours is in the dashboard, stored in this browser only."

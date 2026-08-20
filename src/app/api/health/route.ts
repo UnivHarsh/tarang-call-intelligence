@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_MODEL } from "@/lib/prompt";
 import { VAPI_CONFIGURED } from "@/lib/vapi-assistant";
+import { LIVE_MODEL, LIVE_VOICE } from "@/lib/voice-agent";
 
 export const runtime = "nodejs";
 
@@ -16,5 +17,7 @@ export async function GET() {
     hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
     hasVapiKey: VAPI_CONFIGURED,
     model: process.env.TARANG_MODEL || DEFAULT_MODEL,
+    liveModel: LIVE_MODEL,
+    liveVoice: LIVE_VOICE,
   });
 }

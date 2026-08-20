@@ -81,11 +81,50 @@ try {
   const parsed = JSON.parse(text);
   const u = response.usageMetadata;
 
-  console.log("  ✓  Key works, model responded, JSON schema decoded.\n");
+  console.log("  ✓  Extraction: key works, model responded, JSON schema decoded.");
   console.log("     " + JSON.stringify(parsed));
   console.log(
-    `\n     ${Date.now() - started}ms · ${u?.promptTokenCount ?? "?"} in / ${(u?.candidatesTokenCount ?? 0) + (u?.thoughtsTokenCount ?? 0)} out tokens\n`,
+    `     ${Date.now() - started}ms · ${u?.promptTokenCount ?? "?"} in / ${(u?.candidatesTokenCount ?? 0) + (u?.thoughtsTokenCount ?? 0)} out tokens\n`,
   );
+
+  // --- voice ----------------------------------------------------------------
+  // The microphone demo needs a *different* model (native audio) and the
+  // ephemeral-token service. Both can fail independently of the check above, so
+  // they get their own check rather than being discovered at demo time.
+  const liveModel = process.env.TARANG_LIVE_MODEL || "gemini-2.5-flash-native-audio-preview-12-2025";
+  const liveVoice = process.env.TARANG_LIVE_VOICE || "Aoede";
+
+  try {
+    await ai.authTokens.create({
+      config: {
+        uses: 1,
+        expireTime: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        liveConnectConstraints: {
+          model: liveModel,
+          config: {
+            responseModalities: ["AUDIO"],
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: liveVoice } } },
+          },
+        },
+        httpOptions: { apiVersion: "v1alpha" },
+      },
+    });
+    console.log(`  ✓  Voice: ${liveModel} is available and a session token was issued.`);
+    console.log(`     Voice "${liveVoice}". The microphone demo will work.\n`);
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e);
+    console.log(`  !  Voice: could not open a session on ${liveModel}.`);
+    console.log(`     ${m.slice(0, 220)}`);
+    if (/not found|404|NOT_FOUND|unsupported/i.test(m)) {
+      console.log(`     Try another live model, e.g.:`);
+      console.log(`       TARANG_LIVE_MODEL=gemini-3.1-flash-live-preview npm run check-key`);
+      console.log(`     then add that line to .env.local.`);
+    }
+    console.log(`     Everything else still works — only the microphone button is affected.\n`);
+  }
+
   console.log("     You are good to go. Start the app with:  npm run dev\n");
 } catch (err) {
   const msg = err instanceof Error ? err.message : String(err);

@@ -26,8 +26,8 @@ function Architecture() {
         </defs>
 
         {[
-          { x: 8, label: "Caller", sub: "browser mic", tone: "var(--text-muted)" },
-          { x: 186, label: "Vapi", sub: "voice agent + STT", tone: "var(--series-1)" },
+          { x: 8, label: "Caller", sub: "mic → 16 kHz PCM", tone: "var(--text-muted)" },
+          { x: 186, label: "Gemini Live", sub: "speaks + transcribes", tone: "var(--series-1)" },
           { x: 364, label: "/api/extract", sub: "one LLM pass", tone: "var(--series-1)" },
           { x: 542, label: "Call record", sub: "fixed schema", tone: "var(--series-3)" },
           { x: 720, label: "Dashboard", sub: "aggregate + ask", tone: "var(--series-3)" },
@@ -54,7 +54,7 @@ function Architecture() {
         <line x1={450} y1={118} x2={450} y2={146} stroke="var(--grid)" strokeWidth={1.5} strokeDasharray="3 3" markerEnd="url(#arw)" />
 
         <text x={8} y={232} style={{ fontSize: 11, fill: "var(--text-muted)" }}>
-          The API key never leaves the server. The browser only ever holds the Vapi public key, which is designed to be public.
+          The API key never leaves the server. The browser holds only a single-use token, minted per call and expiring in minutes.
         </text>
       </svg>
     </div>
@@ -218,8 +218,10 @@ export default function HowPage() {
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">The voice agent</div>
         <p className="card-sub">
-          Runs on Vapi&rsquo;s free tier. The assistant config lives in the repo rather than the vendor dashboard, so the
-          whole live demo needs one environment variable and the prompt is reviewable like any other file.
+          The browser opens a WebSocket straight to the Gemini Live API and streams raw 16 kHz PCM up; audio comes back
+          at 24 kHz and is scheduled back-to-back so the speech is gapless. Barge-in works — interrupt her and the queued
+          audio is dropped mid-sentence. The same prompt also drives an optional Vapi assistant for real telephony, so
+          one agent definition covers both transports.
         </p>
         <pre
           className="mono"
