@@ -47,6 +47,14 @@ interface HistoryRun {
   systems: { id: string; wer: number; werRaw: number; devanagariShare: number }[];
 }
 
+interface RealVoice {
+  ranAt: string;
+  lines: number;
+  recorded: number;
+  systems: { id: string; label: string; n?: number; wer?: number; werRaw?: number; cer?: number; unavailable?: string }[];
+  offScript: { reference: string; heard: Record<string, string>; ratio: number }[];
+}
+
 interface Results {
   ranAt: string;
   lines: number;
@@ -55,6 +63,7 @@ interface Results {
   systems: System[];
   examples: Example[];
   limitations: string[];
+  realVoice?: RealVoice;
 }
 
 const SERIES = ["var(--series-1)", "var(--series-3)", "var(--series-5)"];
@@ -351,6 +360,63 @@ export default function AsrPage() {
       <div className="grid">
         {data.examples.map((ex) => <Worked key={ex.clip} ex={ex} systems={data.systems} />)}
       </div>
+
+      {data.realVoice && (
+        <div className="card">
+          <div className="card-head">
+            <div>
+              <div className="card-title">The same lines, read by a person</div>
+              <div className="card-sub">
+                {data.realVoice.lines} recordings scored
+                {data.realVoice.offScript.length > 0 &&
+                  `, ${data.realVoice.offScript.length} excluded for drifting off script`}
+              </div>
+            </div>
+          </div>
+          <p className="prose">
+            Everything above is synthetic speech: clean, evenly paced, no room, no phone line. So the same lines were
+            read aloud into a laptop microphone and put through the identical pipeline. This is the honest ceiling
+            check on every number on this page.
+          </p>
+          <div className="scroll-x">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Setup</th>
+                  <th className="num">Synthetic</th>
+                  <th className="num">Real voice</th>
+                  <th className="num">Gap</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.realVoice.systems.map((r) => {
+                  const syn = live.find((s) => s.id === r.id);
+                  if (r.unavailable || !syn || r.wer === undefined) return null;
+                  return (
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 580 }}>{r.label}</td>
+                      <td className="num mono">{pct(syn.wer!)}</td>
+                      <td className="num mono" style={{ fontWeight: 620 }}>{pct(r.wer)}</td>
+                      <td className="num mono" style={{ color: "var(--critical)" }}>
+                        {(r.wer / Math.max(0.0001, syn.wer!)).toFixed(1)}x
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {data.realVoice.offScript.length > 0 && (
+            <p className="prose" style={{ marginTop: 12 }}>
+              <strong>{data.realVoice.offScript.length} recordings were thrown out, and why matters.</strong> The
+              speaker said the line and then kept talking, so every system returned far more words than the script
+              held and scored above 120%. The recognisers were right and the reference was wrong. Scoring those as
+              recognition failures would have published a bookkeeping mistake as a finding, so the bench now detects
+              the case and reports it separately.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <div className="card-head">
