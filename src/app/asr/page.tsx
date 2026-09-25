@@ -41,6 +41,12 @@ interface Example {
   ladders: Record<string, { stage: string; wer: number }[]>;
 }
 
+interface HistoryRun {
+  ranAt: string;
+  lines: number;
+  systems: { id: string; wer: number; werRaw: number; devanagariShare: number }[];
+}
+
 interface Results {
   ranAt: string;
   lines: number;
@@ -160,6 +166,7 @@ function Worked({ ex, systems }: { ex: Example; systems: System[] }) {
 
 export default function AsrPage() {
   const [data, setData] = useState<Results | null>(null);
+  const [history, setHistory] = useState<HistoryRun[]>([]);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -167,6 +174,10 @@ export default function AsrPage() {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setData)
       .catch(() => setError(true));
+    fetch("/data/asr-history.json")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setHistory)
+      .catch(() => setHistory([]));
   }, []);
 
   if (error) {
@@ -191,13 +202,8 @@ export default function AsrPage() {
       <section style={{ padding: "30px 0 20px" }}>
         <h1 style={{ fontSize: 22, fontWeight: 640, letterSpacing: "-0.02em", margin: "0 0 6px" }}>Speech recognition, measured</h1>
       <p className="prose">
-        Every other page here treats the transcript as a given. It is not: it is a model output, and on code-mixed
-        Hindi and English it is the weakest link in the chain. This page speaks lines whose exact words are already
-        known, sends the identical audio to three recognition setups, and scores what comes back.
-      </p>
-      <p className="prose">
-        The three setups use <strong>the same model on the same audio</strong>. Only the instruction changes, so
-        every difference in the table below is attributable to the prompt and to nothing else.
+        Every other page treats the transcript as a given. It is a model output, and on Hinglish it is the weakest
+        link in the chain. Same model, same audio, three different instructions.
       </p>
 
       {thin && (
@@ -252,6 +258,59 @@ export default function AsrPage() {
             </tbody>
           </table>
         </div>
+        {history.length > 1 && (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            <div className="card-title" style={{ marginBottom: 4 }}>Across {history.length} runs</div>
+            <p className="prose" style={{ marginBottom: 8 }}>
+              One run is a single sample of a stochastic system, so the benchmark keeps every run rather than
+              overwriting itself. The spread matters as much as the average: a setup that is worse but steady is
+              easier to build on than one that is better on average and unpredictable.
+            </p>
+            <div className="scroll-x">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Setup</th>
+                    {history.map((h) => (
+                      <th key={h.ranAt} className="num">
+                        {new Date(h.ranAt).toLocaleDateString()} · n={h.lines}
+                      </th>
+                    ))}
+                    <th className="num">Spread</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {live.map((sys) => {
+                    const vals = history
+                      .map((h) => h.systems.find((x) => x.id === sys.id)?.werRaw)
+                      .filter((v): v is number => typeof v === "number");
+                    const spread = vals.length > 1 ? Math.max(...vals) - Math.min(...vals) : null;
+                    return (
+                      <tr key={sys.id}>
+                        <td style={{ fontWeight: 580 }}>{sys.label}</td>
+                        {history.map((h) => {
+                          const v = h.systems.find((x) => x.id === sys.id)?.werRaw;
+                          return (
+                            <td key={h.ranAt} className="num mono">
+                              {typeof v === "number" ? pct(v) : "—"}
+                            </td>
+                          );
+                        })}
+                        <td className="num mono" style={{
+                          fontWeight: 620,
+                          color: spread !== null && spread > 0.1 ? "var(--critical)" : "var(--good)",
+                        }}>
+                          {spread !== null ? `±${(spread * 50).toFixed(1)}pp` : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {best && worst && best.id !== worst.id && (
           <p className="prose" style={{ marginTop: 12 }}>
             Same model, same audio. <strong>{best.label}</strong> lands at {pct(best.wer!)} and{" "}
@@ -270,10 +329,9 @@ export default function AsrPage() {
           </div>
         </div>
         <p className="prose">
-          A word error rate on Indic speech is partly a statement about the recogniser and partly a statement about
-          how you chose to score it. Scored naively, a correct transcript written in Devanagari against a Roman
-          reference is 100% wrong. So each pair is scored eight times, adding one normalisation at a time. How steeply
-          a line falls tells you how much of its error was never recognition at all.
+          A correct transcript written in Devanagari, scored against a Roman reference, is 100% wrong. So each pair is
+          scored eight times, adding one normalisation at a time. <strong>A line that falls steeply was never failing
+          at recognition.</strong>
         </p>
         <Ladder stages={data.stages} systems={data.systems} />
         <div className="scroll-x" style={{ marginTop: 10 }}>
@@ -289,9 +347,7 @@ export default function AsrPage() {
       </div>
 
       <h2>Listen to it</h2>
-      <p className="prose">
-        The audio below is exactly what each system was sent. Play it, then read what each one returned.
-      </p>
+      <p className="prose">Exactly what each system was sent. Play it, then read what each one heard.</p>
       <div className="grid">
         {data.examples.map((ex) => <Worked key={ex.clip} ex={ex} systems={data.systems} />)}
       </div>

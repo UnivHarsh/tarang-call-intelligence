@@ -1,10 +1,10 @@
 {
-  "ranAt": "2026-09-24T20:44:17.208Z",
-  "lines": 20,
+  "ranAt": "2026-09-25T05:16:04.727Z",
+  "lines": 45,
   "voices": [
-    "gemini-2.5-flash-preview-tts / Aoede",
     "gemini-2.5-flash-preview-tts / Charon",
     "gemini-3.1-flash-tts-preview / Kore",
+    "gemini-3.8-flash-lite-tts / Kore",
     "gemini-3.8-flash-tts / Puck"
   ],
   "stages": [
@@ -56,70 +56,70 @@
       "model": "gemini-3.5-flash-lite",
       "note": "The instruction most people write first.",
       "prompt": "Transcribe this audio.",
-      "n": 20,
+      "n": 14,
       "byStage": [
         {
           "stage": "raw",
-          "wer": 0.3404255319148936,
+          "wer": 0.4789915966386555,
           "sub": 104,
-          "del": 2,
-          "ins": 6
+          "del": 1,
+          "ins": 9
         },
         {
           "stage": "case",
-          "wer": 0.3069908814589666,
-          "sub": 93,
-          "del": 2,
-          "ins": 6
+          "wer": 0.46638655462184875,
+          "sub": 101,
+          "del": 1,
+          "ins": 9
         },
         {
           "stage": "punct",
-          "wer": 0.24316109422492402,
-          "sub": 72,
-          "del": 2,
-          "ins": 6
+          "wer": 0.42857142857142855,
+          "sub": 93,
+          "del": 0,
+          "ins": 9
         },
         {
           "stage": "script",
-          "wer": 0.182370820668693,
-          "sub": 52,
-          "del": 2,
-          "ins": 6
+          "wer": 0.2605042016806723,
+          "sub": 53,
+          "del": 0,
+          "ins": 9
         },
         {
           "stage": "spelling",
-          "wer": 0.1641337386018237,
-          "sub": 46,
-          "del": 2,
-          "ins": 6
+          "wer": 0.23949579831932774,
+          "sub": 48,
+          "del": 0,
+          "ins": 9
         },
         {
           "stage": "numbers",
-          "wer": 0.1519756838905775,
-          "sub": 42,
-          "del": 2,
-          "ins": 6
+          "wer": 0.23109243697478993,
+          "sub": 46,
+          "del": 0,
+          "ins": 9
         },
         {
           "stage": "entities",
-          "wer": 0.14893617021276595,
-          "sub": 41,
-          "del": 2,
-          "ins": 6
+          "wer": 0.226890756302521,
+          "sub": 45,
+          "del": 0,
+          "ins": 9
         },
         {
           "stage": "fillers",
-          "wer": 0.14329268292682926,
-          "sub": 40,
-          "del": 2,
-          "ins": 5
+          "wer": 0.22784810126582278,
+          "sub": 45,
+          "del": 0,
+          "ins": 9
         }
       ],
-      "wer": 0.14329268292682926,
-      "werRaw": 0.3404255319148936,
-      "cer": 0.05651091176901196,
-      "devanagariShare": 0.15,
-      "meanLatencyMs": 1967.35,
+      "wer": 0.22784810126582278,
+      "werRaw": 0.4789915966386555,
+      "cer": 0.0913558331197392,
+      "devanagariShare": 0.35714285714285715,
+      "meanLatencyMs": 2395,
       "unavailable": null
     },
     {
@@ -128,70 +128,70 @@
       "model": "gemini-3.5-flash-lite",
       "note": "Same model, same audio. Only the instruction changes.",
       "prompt": "Transcribe this Indian customer-support audio verbatim. The speech is code-mixed Hindi and English. Write Hindi words in Roman script, not Devanagari. Keep English words in English. Preserve order IDs and amounts exactly as spoken. Output only the transcript, no commentary.",
-      "n": 20,
+      "n": 14,
       "byStage": [
         {
           "stage": "raw",
-          "wer": 0.22796352583586627,
-          "sub": 64,
-          "del": 2,
+          "wer": 0.22268907563025211,
+          "sub": 44,
+          "del": 0,
           "ins": 9
         },
         {
           "stage": "case",
-          "wer": 0.19756838905775076,
-          "sub": 54,
-          "del": 2,
+          "wer": 0.18487394957983194,
+          "sub": 35,
+          "del": 0,
           "ins": 9
         },
         {
           "stage": "punct",
-          "wer": 0.1337386018237082,
-          "sub": 33,
-          "del": 2,
+          "wer": 0.13025210084033614,
+          "sub": 22,
+          "del": 0,
           "ins": 9
         },
         {
           "stage": "script",
-          "wer": 0.1337386018237082,
-          "sub": 33,
-          "del": 2,
+          "wer": 0.13025210084033614,
+          "sub": 22,
+          "del": 0,
           "ins": 9
         },
         {
           "stage": "spelling",
-          "wer": 0.1276595744680851,
-          "sub": 31,
-          "del": 2,
+          "wer": 0.12605042016806722,
+          "sub": 21,
+          "del": 0,
           "ins": 9
         },
         {
           "stage": "numbers",
-          "wer": 0.1033434650455927,
-          "sub": 26,
-          "del": 2,
-          "ins": 6
+          "wer": 0.1134453781512605,
+          "sub": 19,
+          "del": 0,
+          "ins": 8
         },
         {
           "stage": "entities",
-          "wer": 0.1033434650455927,
-          "sub": 26,
-          "del": 2,
-          "ins": 6
+          "wer": 0.1092436974789916,
+          "sub": 18,
+          "del": 0,
+          "ins": 8
         },
         {
           "stage": "fillers",
-          "wer": 0.0975609756097561,
-          "sub": 25,
-          "del": 2,
-          "ins": 5
+          "wer": 0.10548523206751055,
+          "sub": 17,
+          "del": 0,
+          "ins": 8
         }
       ],
-      "wer": 0.0975609756097561,
-      "werRaw": 0.22796352583586627,
-      "cer": 0.032928139417339165,
+      "wer": 0.10548523206751055,
+      "werRaw": 0.22268907563025211,
+      "cer": 0.03834691501737868,
       "devanagariShare": 0,
-      "meanLatencyMs": 2366.3,
+      "meanLatencyMs": 2185.5714285714284,
       "unavailable": null
     },
     {
@@ -200,70 +200,70 @@
       "model": "gemini-3.5-flash-lite",
       "note": "The control. Same model, same audio, script deliberately flipped, to show how much of a WER number is the scoring convention rather than the recogniser.",
       "prompt": "Transcribe this Indian customer-support audio verbatim. The speech is code-mixed Hindi and English. Write the Hindi words in Devanagari script. Preserve order IDs and amounts exactly as spoken. Output only the transcript, no commentary.",
-      "n": 20,
+      "n": 14,
       "byStage": [
         {
           "stage": "raw",
-          "wer": 0.8844984802431611,
-          "sub": 280,
+          "wer": 0.7815126050420168,
+          "sub": 178,
           "del": 1,
-          "ins": 10
+          "ins": 7
         },
         {
           "stage": "case",
-          "wer": 0.8753799392097265,
-          "sub": 277,
+          "wer": 0.7647058823529411,
+          "sub": 174,
           "del": 1,
-          "ins": 10
+          "ins": 7
         },
         {
           "stage": "punct",
-          "wer": 0.8662613981762918,
-          "sub": 274,
-          "del": 1,
-          "ins": 10
+          "wer": 0.7478991596638656,
+          "sub": 171,
+          "del": 0,
+          "ins": 7
         },
         {
           "stage": "script",
-          "wer": 0.47720364741641336,
-          "sub": 146,
-          "del": 1,
-          "ins": 10
+          "wer": 0.42436974789915966,
+          "sub": 94,
+          "del": 0,
+          "ins": 7
         },
         {
           "stage": "spelling",
-          "wer": 0.39209726443769,
-          "sub": 118,
-          "del": 1,
-          "ins": 10
+          "wer": 0.3487394957983193,
+          "sub": 76,
+          "del": 0,
+          "ins": 7
         },
         {
           "stage": "numbers",
-          "wer": 0.3768996960486322,
-          "sub": 113,
-          "del": 1,
-          "ins": 10
+          "wer": 0.3319327731092437,
+          "sub": 72,
+          "del": 0,
+          "ins": 7
         },
         {
           "stage": "entities",
-          "wer": 0.3768996960486322,
-          "sub": 113,
-          "del": 1,
-          "ins": 10
+          "wer": 0.3235294117647059,
+          "sub": 70,
+          "del": 0,
+          "ins": 7
         },
         {
           "stage": "fillers",
-          "wer": 0.375,
-          "sub": 113,
-          "del": 1,
-          "ins": 9
+          "wer": 0.32489451476793246,
+          "sub": 70,
+          "del": 0,
+          "ins": 7
         }
       ],
-      "wer": 0.375,
-      "werRaw": 0.8844984802431611,
-      "cer": 0.13960714506158844,
-      "devanagariShare": 0.9,
-      "meanLatencyMs": 1470.7,
+      "wer": 0.32489451476793246,
+      "werRaw": 0.7815126050420168,
+      "cer": 0.12414627649865631,
+      "devanagariShare": 0.7857142857142857,
+      "meanLatencyMs": 3082.285714285714,
       "unavailable": null
     }
   ],
@@ -273,9 +273,9 @@
       "callId": "c_0068",
       "reference": "Return pickup 2 baar schedule ho chuka hai par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail.",
       "heard": {
-        "naive": "Return pickup do bar schedule ho chuka hai, par koi aaya hi nahi. Har bar SMS aata hai ki attempt fail.",
-        "codemix": "Return pickup do baar schedule ho chuka hai, par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail.",
-        "devanagari": "रिटर्न पिकअप दो बार स्केड्यूल हो चुका है, पर कोई आया ही नहीं। हर बार एसएमएस आता है कि अटेम्प्ट फेल।"
+        "naive": "Return pickup two bar schedule ho chuka hai, par koi aaya hi nahi. Har baar SMS aata hai ki attempt failed.",
+        "codemix": "return pickup 2 baar schedule ho chuka hai par koi aaya hi nahi, har baar SMS aata hai ki attempt failed",
+        "devanagari": "Return pickup do bar schedule ho chuka hai, par koi aya hi nahi. Har bar SMS ata hai ki attempt failed."
       },
       "ladders": {
         "naive": [
@@ -297,25 +297,25 @@
           },
           {
             "stage": "spelling",
-            "wer": 0.047619047619047616
+            "wer": 0.09523809523809523
           },
           {
             "stage": "numbers",
-            "wer": 0
+            "wer": 0.047619047619047616
           },
           {
             "stage": "entities",
-            "wer": 0
+            "wer": 0.047619047619047616
           },
           {
             "stage": "fillers",
-            "wer": 0
+            "wer": 0.047619047619047616
           }
         ],
         "codemix": [
           {
             "stage": "raw",
-            "wer": 0.09523809523809523
+            "wer": 0.19047619047619047
           },
           {
             "stage": "case",
@@ -335,49 +335,49 @@
           },
           {
             "stage": "numbers",
-            "wer": 0
+            "wer": 0.047619047619047616
           },
           {
             "stage": "entities",
-            "wer": 0
+            "wer": 0.047619047619047616
           },
           {
             "stage": "fillers",
-            "wer": 0
+            "wer": 0.047619047619047616
           }
         ],
         "devanagari": [
           {
             "stage": "raw",
-            "wer": 1
+            "wer": 0.3333333333333333
           },
           {
             "stage": "case",
-            "wer": 1
+            "wer": 0.3333333333333333
           },
           {
             "stage": "punct",
-            "wer": 1
+            "wer": 0.2857142857142857
           },
           {
             "stage": "script",
-            "wer": 0.5238095238095238
+            "wer": 0.2857142857142857
           },
           {
             "stage": "spelling",
-            "wer": 0.38095238095238093
+            "wer": 0.19047619047619047
           },
           {
             "stage": "numbers",
-            "wer": 0.3333333333333333
+            "wer": 0.14285714285714285
           },
           {
             "stage": "entities",
-            "wer": 0.3333333333333333
+            "wer": 0.14285714285714285
           },
           {
             "stage": "fillers",
-            "wer": 0.3333333333333333
+            "wer": 0.14285714285714285
           }
         ]
       }
@@ -387,77 +387,77 @@
       "callId": "c_0018",
       "reference": "4-5, sab theek tha. Delivery boy bhi polite tha.",
       "heard": {
-        "naive": "Faltik tha delivery boy bhi polite tha.",
-        "codemix": "5 theek tha, delivery boy bhi polite tha.",
-        "devanagari": "5 ठीक था। डिलीवरी बॉय भी पोलाइट था।"
+        "naive": "Food, 5 sab theek tha. Delivery boy bhi polite tha.",
+        "codemix": "45 sab theek tha. Delivery boy bhi polite tha.",
+        "devanagari": "45 सब ठीक था डिलीवरी बॉय भी पोलाइट था"
       },
       "ladders": {
         "naive": [
           {
             "stage": "raw",
-            "wer": 0.5555555555555556
+            "wer": 0.2222222222222222
           },
           {
             "stage": "case",
-            "wer": 0.4444444444444444
+            "wer": 0.2222222222222222
           },
           {
             "stage": "punct",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           },
           {
             "stage": "script",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           },
           {
             "stage": "spelling",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           },
           {
             "stage": "numbers",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           },
           {
             "stage": "entities",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           },
           {
             "stage": "fillers",
-            "wer": 0.3333333333333333
+            "wer": 0.2222222222222222
           }
         ],
         "codemix": [
           {
             "stage": "raw",
-            "wer": 0.4444444444444444
+            "wer": 0.1111111111111111
           },
           {
             "stage": "case",
-            "wer": 0.3333333333333333
+            "wer": 0.1111111111111111
           },
           {
             "stage": "punct",
-            "wer": 0.2222222222222222
+            "wer": 0.1111111111111111
           },
           {
             "stage": "script",
-            "wer": 0.2222222222222222
+            "wer": 0.1111111111111111
           },
           {
             "stage": "spelling",
-            "wer": 0.2222222222222222
+            "wer": 0.1111111111111111
           },
           {
             "stage": "numbers",
-            "wer": 0.2222222222222222
+            "wer": 0.1111111111111111
           },
           {
             "stage": "entities",
-            "wer": 0.2222222222222222
+            "wer": 0
           },
           {
             "stage": "fillers",
-            "wer": 0.2222222222222222
+            "wer": 0
           }
         ],
         "devanagari": [
@@ -475,23 +475,23 @@
           },
           {
             "stage": "script",
-            "wer": 0.7777777777777778
+            "wer": 0.4444444444444444
           },
           {
             "stage": "spelling",
-            "wer": 0.6666666666666666
+            "wer": 0.3333333333333333
           },
           {
             "stage": "numbers",
-            "wer": 0.6666666666666666
+            "wer": 0.3333333333333333
           },
           {
             "stage": "entities",
-            "wer": 0.6666666666666666
+            "wer": 0.2222222222222222
           },
           {
             "stage": "fillers",
-            "wer": 0.6666666666666666
+            "wer": 0.2222222222222222
           }
         ]
       }
@@ -501,53 +501,53 @@
       "callId": "c_0094",
       "reference": "Aapne SMS bheja tha 30% off ka, par cart mein lag nahi raha.",
       "heard": {
-        "naive": "Aapne SMS bheja tha 30% off ka par cart me lag nahi raha.",
-        "codemix": "Aapne SMS bheja tha 30% off ka, par cart mein lag nahi raha.",
-        "devanagari": "आपने SMS भेजा था 30% off का, पर कार्ट में लग नहीं रहा।"
+        "naive": "Aap ne SMS bheja tha 30% off ka par cart me lag nahi raha.",
+        "codemix": "Aapne SMS bheja tha 30% off ka par cart mein lag nahi raha",
+        "devanagari": "आपने SMS भेजा था 30% off का पर काट में लग नहीं रहा।"
       },
       "ladders": {
         "naive": [
           {
             "stage": "raw",
-            "wer": 0.15384615384615385
+            "wer": 0.3076923076923077
           },
           {
             "stage": "case",
-            "wer": 0.15384615384615385
+            "wer": 0.3076923076923077
           },
           {
             "stage": "punct",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           },
           {
             "stage": "script",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           },
           {
             "stage": "spelling",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           },
           {
             "stage": "numbers",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           },
           {
             "stage": "entities",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           },
           {
             "stage": "fillers",
-            "wer": 0.07692307692307693
+            "wer": 0.23076923076923078
           }
         ],
         "codemix": [
           {
             "stage": "raw",
-            "wer": 0
+            "wer": 0.15384615384615385
           },
           {
             "stage": "case",
-            "wer": 0
+            "wer": 0.15384615384615385
           },
           {
             "stage": "punct",

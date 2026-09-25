@@ -1,0 +1,50 @@
+[
+  {
+    "ranAt": "2026-09-25T04:34:00.000Z",
+    "lines": 20,
+    "systems": [
+      {
+        "id": "naive",
+        "wer": 0.143,
+        "werRaw": 0.34,
+        "devanagariShare": 0.15
+      },
+      {
+        "id": "codemix",
+        "wer": 0.098,
+        "werRaw": 0.228,
+        "devanagariShare": 0.0
+      },
+      {
+        "id": "devanagari",
+        "wer": 0.375,
+        "werRaw": 0.884,
+        "devanagariShare": 0.9
+      }
+    ]
+  },
+  {
+    "ranAt": "2026-09-25T05:16:04.727Z",
+    "lines": 14,
+    "systems": [
+      {
+        "id": "naive",
+        "wer": 0.22784810126582278,
+        "werRaw": 0.4789915966386555,
+        "devanagariShare": 0.35714285714285715
+      },
+      {
+        "id": "codemix",
+        "wer": 0.10548523206751055,
+        "werRaw": 0.22268907563025211,
+        "devanagariShare": 0
+      },
+      {
+        "id": "devanagari",
+        "wer": 0.32489451476793246,
+        "werRaw": 0.7815126050420168,
+        "devanagariShare": 0.7857142857142857
+      }
+    ]
+  }
+]

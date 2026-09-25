@@ -67,9 +67,22 @@ const pct = (x) => `${(x * 100).toFixed(1)}%`;
  * about the hard case. Spread across distinct calls so one caller's phrasing
  * cannot dominate, and long enough that a single word cannot swing the rate.
  */
+
+/**
+ * Collapses templated near-duplicates.
+ *
+ * The corpus is generated from scenarios, so "mera refund abhi tak nahi aaya,
+ * 10 din ho gaye" recurs with only the number changing. Three copies of one
+ * sentence is not three samples: it triples the weight of whatever that
+ * sentence happens to expose and hides everything it does not.
+ */
+const shape = (t) =>
+  String(t).toLowerCase().replace(/[0-9]+/g, "#").replace(/[^a-z#\s]/g, " ").replace(/\s+/g, " ").trim().slice(0, 55);
+
 function pickLines(index, transcripts, n) {
   const out = [];
   const seenCalls = new Set();
+  const seenShapes = new Set();
   for (const call of index) {
     if (out.length >= n) break;
     if (seenCalls.has(call.id)) continue;
@@ -78,6 +91,9 @@ function pickLines(index, transcripts, n) {
       (t) => t.role === "customer" && String(t.text || "").split(/\s+/).length >= 9,
     );
     if (!line) continue;
+    const key = shape(line.text);
+    if (seenShapes.has(key)) continue;
+    seenShapes.add(key);
     seenCalls.add(call.id);
     out.push({
       callId: call.id,
@@ -213,6 +229,26 @@ async function main() {
   };
 
   fs.writeFileSync(path.join(DATA, "asr-results.json"), JSON.stringify(out, null, 2));
+
+  /*
+   * Append the headline of every run to a history file.
+   *
+   * A single benchmark run is one sample of a stochastic system, and the second
+   * run here moved the plain-instruction arm by fourteen points while the
+   * code-mix arm moved by half a point. That difference is the most useful thing
+   * either run produced, and it only exists because both were kept. An eval that
+   * overwrites itself can never tell you which of its numbers you can trust.
+   */
+  const HISTORY = path.join(DATA, "asr-history.json");
+  const history = fs.existsSync(HISTORY) ? JSON.parse(fs.readFileSync(HISTORY, "utf8")) : [];
+  history.push({
+    ranAt: out.ranAt,
+    lines: systems.find((s) => s.n)?.n ?? 0,
+    systems: systems
+      .filter((s) => !s.unavailable)
+      .map((s) => ({ id: s.id, wer: s.wer, werRaw: s.werRaw, devanagariShare: s.devanagariShare })),
+  });
+  fs.writeFileSync(HISTORY, JSON.stringify(history, null, 2));
 
   console.log(`\n${bold("  system                            raw    normalised    CER   latency")}`);
   console.log(dim("  ---------------------------------------------------------------------"));

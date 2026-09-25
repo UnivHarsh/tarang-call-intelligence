@@ -6,10 +6,11 @@ import { useStore } from "@/lib/store";
 import {
   computeKpis, emergingIssues, recedingIssues, stackedByRootCause, weeklySeries, distribution,
   cityWeekRates, deflectionModel, metricCsat, metricContainment, inr, ROOT_CAUSE_TEST, shortDate, NOW, WEEK,
+  clusterSignals,
   type Emerging,
 } from "@/lib/analytics";
 import { INTENT_LABELS, ROOT_CAUSE_LABELS } from "@/lib/types";
-import { BarList, Heatmap, LineChart, StackedColumns, StatTile, seriesColor } from "@/components/charts";
+import { BarList, Heatmap, LineChart, StackedColumns, StatTile, Sparkline, seriesColor } from "@/components/charts";
 import { ShiftList } from "@/components/shift-list";
 import { Loading } from "@/components/loading";
 
@@ -17,6 +18,10 @@ export default function Overview() {
   const { calls, loading, error, meta, live } = useStore();
   const [focus, setFocus] = useState<string | null>(null);
   const [mapPick, setMapPick] = useState<Emerging | null>(null);
+
+  // The three things buried in the corpus. They lead the page because a dashboard
+  // should open with what it found, not with a description of itself.
+  const signals = useMemo(() => (calls.length ? clusterSignals(calls).slice(0, 3) : []), [calls]);
 
   const kpis = useMemo(() => (calls.length ? computeKpis(calls) : []), [calls]);
   const emerging = useMemo(() => (calls.length ? emergingIssues(calls) : []), [calls]);
@@ -63,15 +68,46 @@ export default function Overview() {
       <section style={{ padding: "34px 0 26px" }}>
         <div className="eyebrow">Kartly · customer support · last 8 weeks</div>
         <h1 style={{ fontSize: 27, fontWeight: 660, letterSpacing: "-0.025em", margin: "10px 0 8px", maxWidth: "30ch" }}>
-          Every support call, turned into something you can query.
+          {signals.length
+            ? `${signals.length} things are quietly costing this business money.`
+            : "Every support call, read in full."}
         </h1>
-        <p style={{ color: "var(--text-secondary)", maxWidth: "68ch", margin: 0 }}>
-          A voice agent handles inbound support for a D2C grocery brand. Each call is transcribed, then passed through one
-          extraction pass that returns a fixed schema — intent, root cause, sentiment arc, resolution, risk, and any product
-          signal buried in the conversation. This page is what falls out the other side.
+        <p style={{ color: "var(--text-secondary)", maxWidth: "62ch", margin: 0 }}>
+          A support team listens to about 2% of its calls. These came out of reading all of them.
         </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 28, marginTop: 26 }}>
+        {signals.length > 0 && (
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 20 }}
+          >
+            {signals.map((s) => (
+              <Link
+                key={s.title}
+                href="/signals"
+                className="card"
+                style={{ display: "block", textDecoration: "none", color: "inherit", padding: "14px 16px" }}
+              >
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 7, flexWrap: "wrap" }}>
+                  <span className="chip sev" data-level={s.severity}>{s.severity}</span>
+                  <span className="chip">{s.owner}</span>
+                </div>
+                <div style={{ fontSize: 14.5, fontWeight: 620, lineHeight: 1.32, marginBottom: 8 }}>{s.title}</div>
+                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+                  <div className="stat-label" style={{ lineHeight: 1.45 }}>
+                    {s.count} calls
+                    {s.refundExposure > 0 && <> · {inr(s.refundExposure)} at risk</>}
+                    <br />
+                    since {shortDate(s.firstSeen)}
+                  </div>
+                  <Sparkline data={s.weeklyCounts} width={74} height={26} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 28, marginTop: 24 }}>
           <div>
             <div className="hero-figure">{totals.calls.toLocaleString("en-IN")}</div>
             <div className="stat-label" style={{ marginTop: 2 }}>
@@ -90,6 +126,41 @@ export default function Overview() {
             </Link>
           </div>
         </div>
+      </section>
+
+      {/*
+        Who actually opens this, and what they do differently afterwards.
+        Without it the dashboard is a pile of charts; with it every number above
+        has a person attached to it, which is the difference between a demo and
+        something a team adopts.
+      */}
+      <section
+        className="grid"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 26 }}
+      >
+        {[
+          {
+            team: "Support ops",
+            uses: "Signals and Calls",
+            does: "Stops triaging the same complaint twice. One incident, one owner, the calls behind it attached.",
+          },
+          {
+            team: "Product",
+            uses: "Signals and Ask",
+            does: "Gets the bug report the support queue never files, with the week it started and the platform it is on.",
+          },
+          {
+            team: "Growth and CX leadership",
+            uses: "Overview",
+            does: "Sees which root cause is rising this week before it shows up in churn, not after.",
+          },
+        ].map((r) => (
+          <div key={r.team} className="card" style={{ padding: "14px 16px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 640, marginBottom: 3 }}>{r.team}</div>
+            <div className="stat-label" style={{ marginBottom: 7 }}>lives in {r.uses}</div>
+            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-secondary)" }}>{r.does}</div>
+          </div>
+        ))}
       </section>
 
       <div

@@ -199,7 +199,7 @@ export const SYSTEMS = [
  * of the benchmark is exactly the kind of bug that produces a confident,
  * completely wrong comparison table.
  */
-export async function transcribe(wav, system, key) {
+export async function transcribe(wav, system, key, mimeType = "audio/wav") {
   const started = Date.now();
   const generationConfig = { temperature: 0 };
   if (system.thinking !== false) generationConfig.thinkingConfig = { thinkingBudget: 0 };
@@ -208,7 +208,7 @@ export async function transcribe(wav, system, key) {
     contents: [{
       parts: [
         { text: system.prompt },
-        { inlineData: { mimeType: "audio/wav", data: wav.toString("base64") } },
+        { inlineData: { mimeType, data: wav.toString("base64") } },
       ],
     }],
     generationConfig,

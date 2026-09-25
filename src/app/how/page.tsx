@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EXTRACTION_SCHEMA, SYSTEM_PROMPT, MODEL_RATES, DEFAULT_MODEL, FREE_TIER_NOTE } from "@/lib/prompt";
 import { ASSISTANT_SYSTEM_PROMPT } from "@/lib/vapi-assistant";
@@ -8,6 +9,7 @@ import { useStore } from "@/lib/store";
 interface EvalResults {
   ranAt: string;
   model: string;
+  servedBy?: Record<string, number>;
   n: number;
   fields: { field: string; llm: number; rules: number }[];
   meanLatencyMs: number;
@@ -112,6 +114,50 @@ export default function HowPage() {
           knowing which numbers on the dashboard are earned and which are estimates.
         </p>
       </section>
+
+      {/*
+        A first-time visitor lands here with no idea which of six pages to open.
+        Four lines up front beat a perfect architecture diagram they never scroll to.
+      */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-title">Using this in sixty seconds</div>
+        <p className="card-sub">Four steps, in the order they are meant to be taken.</p>
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12, marginTop: 12 }}
+        >
+          {[
+            { n: 1, to: "/", label: "Overview", say: "Start with the three signals at the top. They are what reading every call found that nobody had filed." },
+            { n: 2, to: "/signals", label: "Signals", say: "Open one. Every signal names an owning team and lists the calls behind it, so it can be handed over as-is." },
+            { n: 3, to: "/calls", label: "Calls", say: "Click any call to see the full transcript next to the record extracted from it. The evidence is never more than one click away." },
+            { n: 4, to: "/ask", label: "Ask", say: "Ask the corpus a question in plain English. Answers cite the individual calls they came from." },
+          ].map((s) => (
+            <Link
+              key={s.n}
+              href={s.to}
+              className="card"
+              style={{ display: "block", textDecoration: "none", color: "inherit", padding: "13px 15px", margin: 0 }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span
+                  style={{
+                    width: 20, height: 20, borderRadius: 6, background: "var(--series-1)", color: "var(--plane)",
+                    fontSize: 11.5, fontWeight: 700, display: "grid", placeItems: "center", flex: "none",
+                  }}
+                >
+                  {s.n}
+                </span>
+                <span style={{ fontSize: 13.5, fontWeight: 620 }}>{s.label}</span>
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--text-secondary)" }}>{s.say}</div>
+            </Link>
+          ))}
+        </div>
+        <p className="card-sub" style={{ marginTop: 12 }}>
+          Two more worth a look: <Link href="/live">Live demo</Link> to talk to the agent yourself, and{" "}
+          <Link href="/asr">Speech accuracy</Link> for how wrong the transcripts underneath all of this actually are.
+        </p>
+      </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Architecture</div>
@@ -375,6 +421,28 @@ export default function HowPage() {
             </div>
           </div>
         )}
+
+        {/*
+          The question everyone asks about a project like this is "why the small
+          model", and the honest answer turned out to be more interesting than the
+          choice itself.
+        */}
+        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+          <div className="card-title" style={{ marginBottom: 4 }}>Which model, and why it barely matters here</div>
+          <p className="card-sub" style={{ maxWidth: "74ch", lineHeight: 1.6 }}>
+            Flash-Lite is not a considered choice, it is the only one the free tier will sustain. The larger Flash model
+            answers a single request and then returns <code>429 quota exceeded</code>, so a 45-call run cannot finish on
+            it. The extraction route is built to fall back rather than fail, which is right for a user and wrong for a
+            benchmark: an early run reported itself as Flash while every call had quietly landed on Flash-Lite. The eval
+            now records which model actually served each call, and the table above names the one that served the most.
+          </p>
+          <p className="card-sub" style={{ maxWidth: "74ch", lineHeight: 1.6, marginTop: 8 }}>
+            The result of chasing this: across three runs the model tier moved intent between 82% and 89% and root cause
+            between 80% and 82%. The ceiling here is not the model. It is that two of the nine fields are categorical
+            labels the corpus was generated from, which is a problem you fix by rewriting the labels or by using real
+            calls, not by buying a bigger model.
+          </p>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------- */}

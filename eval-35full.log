@@ -1,0 +1,26 @@
+
+> tarang-call-intelligence@1.0.0 eval
+> node scripts/eval-extraction.mjs
+
+Using the server already running at http://localhost:3000
+
+Evaluating 45 calls on gemini-3.5-flash
+
+  1/45 calls scored  2/45 calls scored  3/45 calls scored  4/45 calls scored  5/45 calls scored  6/45 calls scored  7/45 calls scored  8/45 calls scored  9/45 calls scored  10/45 calls scored  11/45 calls scored  12/45 calls scored  13/45 calls scored  14/45 calls scored  15/45 calls scored  16/45 calls scored  17/45 calls scored  18/45 calls scored  19/45 calls scored  20/45 calls scored  21/45 calls scored  22/45 calls scored  23/45 calls scored  24/45 calls scored  25/45 calls scored  26/45 calls scored  27/45 calls scored  28/45 calls scored  29/45 calls scored  30/45 calls scored  31/45 calls scored  32/45 calls scored  33/45 calls scored  34/45 calls scored  35/45 calls scored  36/45 calls scored  37/45 calls scored  38/45 calls scored  39/45 calls scored  40/45 calls scored  41/45 calls scored  42/45 calls scored  43/45 calls scored  44/45 calls scored  45/45 calls scored
+
+field                model    rules    delta
+---------------------------------------------
+primaryIntent          84%    100%   -16
+rootCause              82%    100%   -18
+resolution             42%     42%   +0
+resolved               58%     58%   +0
+contained              71%     71%   +0
+refundRequested        91%     84%   +7
+csatPredicted          80%     80%   +0
+escalationRisk         80%     80%   +0
+churnRisk             100%     87%   +13
+
+product signal       precision 35%  recall 100%
+mean latency 13707ms   mean cost $0.0013/call
+
+Wrote public/data/eval-results.json — the How it works page now shows these numbers.

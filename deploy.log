@@ -1,0 +1,220 @@
+<claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />
+Vercel CLI 60.0.1 (Node.js 22.20.0)
+> [debug] [2026-09-25T05:04:14.245Z] Agent/TTY/nonInteractive: isAgent=true agentName=claude-code_2-1-281_agent stdin.isTTY=undefined --non-interactive=false explicitFalse=false => nonInteractive=true
+> [debug] [2026-09-25T05:04:14.247Z] user supplied a possible target for deployment or an extension
+> [debug] [2026-09-25T05:04:14.366Z] failed to find extension command with name "vercel---prod"
+> [debug] [2026-09-25T05:04:14.968Z] Setting target to production
+> [debug] [2026-09-25T05:04:15.024Z] Spinner invoked (Deploying tarang-call-intelligence) with a 0ms delay
+> [debug] [2026-09-25T05:04:15.026Z] Valid access token, skipping token refresh.
+[client-debug] 2026-09-25T05:04:15.040Z Creating deployment...
+[client-debug] 2026-09-25T05:04:15.041Z Provided 'path' is a directory.
+> [debug] [2026-09-25T05:04:15.083Z] #1 → GET https://api.vercel.com/v9/projects/prj_Utibu6dazejx6A8qDhJZwKqa3FCk?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:15.088Z Found 26 rules in .vercelignore
+[client-debug] 2026-09-25T05:04:15.088Z Building file tree...
+[client-debug] 2026-09-25T05:04:15.097Z Found 66 files in the specified directory
+[client-debug] 2026-09-25T05:04:15.115Z Yielding a 'hashes-calculated' event with 66 hashes
+[client-debug] 2026-09-25T05:04:15.116Z Using provided API URL: https://api.vercel.com
+[client-debug] 2026-09-25T05:04:15.116Z Using provided user agent: vercel 60.0.1 node-v22.20.0 win32 (x64)
+[client-debug] 2026-09-25T05:04:15.116Z Setting platform version to harcoded value 2
+[client-debug] 2026-09-25T05:04:15.116Z Creating the deployment and starting upload...
+[client-debug] 2026-09-25T05:04:15.116Z Determining necessary files for upload...
+[client-debug] 2026-09-25T05:04:15.116Z Creating deployment
+[client-debug] 2026-09-25T05:04:15.117Z Sending deployment creation API request
+> [debug] [2026-09-25T05:04:15.955Z] #1 ← 200 OK: sfo1::fc5dl-1790312656662-7c16c582cc9b [872ms]
+[client-debug] 2026-09-25T05:04:16.082Z Deployment response: {"error":{"code":"missing_files","message":"Missing files","missing":["2341280f6db3b2c2f87a2ed52fb35f5fc1007108","2381075047e048c16597ed0167ea522dbf3b7caf","373f24e2b72b04c6681e11e544747bb5b1be98dd","435ffd05b283ffd1192d34d71864af2d9f18e7cc","47833933490c865d53f691f4651325dd72c613e9","6c02acbe268c5465d6ea22c0a2682f6899a3a9ec","81d245ad2550d138f669f0d4cd9fafd5cfccf47e","aafe5e34480a5e8a9dee6192ddc19aa9449f1a83","afc3c6ee58ff34f956795198e8693f71e6a82491"]}}
+[client-debug] 2026-09-25T05:04:16.082Z Error: Deployment request status is 400
+[client-debug] 2026-09-25T05:04:16.082Z 9 files are required to upload
+[client-debug] 2026-09-25T05:04:16.082Z Yielding a 'file-count' event
+> [debug] [2026-09-25T05:04:16.082Z] Total files 66, 9 changed
+> [debug] [2026-09-25T05:04:16.083Z] Spinner invoked (Uploading [--------------------] (0.0B/1.8MB)) with a 0ms delay
+[client-debug] 2026-09-25T05:04:16.083Z Building an upload list...
+[client-debug] 2026-09-25T05:04:16.085Z Starting upload
+[client-debug] 2026-09-25T05:04:16.086Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.088Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.089Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.090Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.091Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.092Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.093Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.094Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.095Z POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.552Z DONE in 466ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:16.552Z File 2341280f6db3b2c2f87a2ed52fb35f5fc1007108 (D:\Kirana Club\Claude Code\tarang-call-intelligence\public\data\asr-results.json) uploaded
+[client-debug] 2026-09-25T05:04:16.552Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:16.553Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\public\data\asr-results.json (15.46KB)
+> [debug] [2026-09-25T05:04:16.623Z] Spinner invoked (Uploading [=====---------------] (483.8KB/1.8MB)) with a 0ms delay
+> [debug] [2026-09-25T05:04:16.643Z] Spinner invoked (Uploading [==========----------] (947.8KB/1.8MB)) with a 0ms delay
+> [debug] [2026-09-25T05:04:16.663Z] Spinner invoked (Uploading [===============-----] (1.4MB/1.8MB)) with a 0ms delay
+> [debug] [2026-09-25T05:04:17.585Z] Spinner invoked (Uploading [====================] (1.8MB/1.8MB)) with a 0ms delay
+[client-debug] 2026-09-25T05:04:17.795Z DONE in 1701ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:17.795Z File aafe5e34480a5e8a9dee6192ddc19aa9449f1a83 (D:\Kirana Club\Claude Code\tarang-call-intelligence\public\audio\line-02.wav) uploaded
+[client-debug] 2026-09-25T05:04:17.795Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:17.795Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\public\audio\line-02.wav (129.93KB)
+[client-debug] 2026-09-25T05:04:17.956Z DONE in 1865ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:17.956Z File 47833933490c865d53f691f4651325dd72c613e9 (D:\Kirana Club\Claude Code\tarang-call-intelligence\deploy.log) uploaded
+[client-debug] 2026-09-25T05:04:17.956Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:17.956Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\deploy.log (1.24KB)
+[client-debug] 2026-09-25T05:04:17.995Z DONE in 1903ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:17.995Z File 6c02acbe268c5465d6ea22c0a2682f6899a3a9ec (D:\Kirana Club\Claude Code\tarang-call-intelligence\public\pcm-worklet.js) uploaded
+[client-debug] 2026-09-25T05:04:17.995Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:17.995Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\public\pcm-worklet.js (2.32KB)
+[client-debug] 2026-09-25T05:04:18.189Z DONE in 2101ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:18.189Z File 2381075047e048c16597ed0167ea522dbf3b7caf (D:\Kirana Club\Claude Code\tarang-call-intelligence\src\components\charts.tsx) uploaded
+[client-debug] 2026-09-25T05:04:18.189Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:18.189Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\src\components\charts.tsx (28.03KB)
+[client-debug] 2026-09-25T05:04:18.301Z DONE in 2205ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:18.301Z File afc3c6ee58ff34f956795198e8693f71e6a82491 (D:\Kirana Club\Claude Code\tarang-call-intelligence\scripts\corpus\scenarios.mjs) uploaded
+[client-debug] 2026-09-25T05:04:18.301Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:18.301Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\scripts\corpus\scenarios.mjs (46.5KB)
+[client-debug] 2026-09-25T05:04:18.626Z DONE in 2537ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:18.639Z File 373f24e2b72b04c6681e11e544747bb5b1be98dd (D:\Kirana Club\Claude Code\tarang-call-intelligence\public\data\index.json) uploaded
+[client-debug] 2026-09-25T05:04:18.639Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:18.639Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\public\data\index.json (1.61MB)
+[client-debug] 2026-09-25T05:04:20.018Z DONE in 3928ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:20.018Z File 435ffd05b283ffd1192d34d71864af2d9f18e7cc (D:\Kirana Club\Claude Code\tarang-call-intelligence\scripts\setup.mjs) uploaded
+[client-debug] 2026-09-25T05:04:20.018Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:20.018Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\scripts\setup.mjs (6.36KB)
+[client-debug] 2026-09-25T05:04:20.195Z DONE in 4102ms: POST https://api.vercel.com/v2/files?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:20.195Z File 81d245ad2550d138f669f0d4cd9fafd5cfccf47e (D:\Kirana Club\Claude Code\tarang-call-intelligence\src\app\signals\page.tsx) uploaded
+[client-debug] 2026-09-25T05:04:20.195Z Yielding a 'file-uploaded' event
+> [debug] [2026-09-25T05:04:20.195Z] Uploaded: D:\Kirana Club\Claude Code\tarang-call-intelligence\src\app\signals\page.tsx (8.51KB)
+[client-debug] 2026-09-25T05:04:20.195Z All files uploaded
+[client-debug] 2026-09-25T05:04:20.195Z Yielding a 'all-files-uploaded' event
+[client-debug] 2026-09-25T05:04:20.195Z Starting deployment creation
+[client-debug] 2026-09-25T05:04:20.195Z Creating deployment
+[client-debug] 2026-09-25T05:04:20.196Z Sending deployment creation API request
+[client-debug] 2026-09-25T05:04:21.114Z Deployment response: {"alias":["tarang-call-intelligence-univharshs-projects.vercel.app"],"aliasAssigned":false,"automaticAliases":["tarang-call-intelligence-univharshs-projects.vercel.app"],"bootedAt":1790312661717,"buildingAt":1790312661717,"buildSkipped":false,"createdAt":1790312661717,"creator":{"uid":"ptBZRYJAuEtnQDBGox6InSTN","username":"univharsh"},"duration":{},"id":"dpl_5PLch77nT41ptYUA1EgJuumaUqcG","name":"tarang-call-intelligence","meta":{"githubCommitAuthorName":"Harsh","githubCommitAuthorEmail":"design@retailpulse.ai","githubCommitMessage":"Prepare for publish","githubCommitOrg":"UnivHarsh","githubCommitRef":"main","githubCommitRepo":"tarang-call-intelligence","githubCommitSha":"930ef2c21dd28e26048d9912785a86b566686fd1","githubDeployment":"1","githubOrg":"UnivHarsh","githubRepo":"tarang-call-intelligence","gitDirty":"1","gitRootDirectory":"","actor":"claude-code_2-1-281_agent"},"originCacheRegion":"iad1","project":{"id":"prj_Utibu6dazejx6A8qDhJZwKqa3FCk","name":"tarang-call-intelligence","framework":"nextjs"},"public":false,"readyState":"INITIALIZING","regions":["iad1"],"source":"cli","status":"INITIALIZING","target":"production","team":{"id":"team_RmXqZEJPnXUDZyJffkoSctzv","name":"univharsh's projects","slug":"univharshs-projects"},"type":"LAMBDAS","url":"tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app","version":2,"previewCommentsEnabled":true,"oidcTokenClaims":{"sub":"owner:univharshs-projects:project:tarang-call-intelligence:environment:production","iss":"https://oidc.vercel.com/univharshs-projects","scope":"owner:univharshs-projects:project:tarang-call-intelligence:environment:production","aud":"https://vercel.com/univharshs-projects","owner":"univharshs-projects","owner_id":"team_RmXqZEJPnXUDZyJffkoSctzv","project":"tarang-call-intelligence","project_id":"prj_Utibu6dazejx6A8qDhJZwKqa3FCk","environment":"production","plan":"hobby"},"lambdas":[{"id":"bld_lrtk3t62h","createdAt":1790312661374,"entrypoint":".","readyState":"READY","readyStateAt":1790312661374,"output":[]}],"aliasAssignedAt":null,"build":{"env":[]},"builds":[],"createdIn":"sfo1","env":[],"functions":null,"inspectorUrl":"https://vercel.com/univharshs-projects/tarang-call-intelligence/5PLch77nT41ptYUA1EgJuumaUqcG","isInConcurrentBuildsQueue":false,"isInSystemBuildsQueue":true,"ownerId":"team_RmXqZEJPnXUDZyJffkoSctzv","plan":"hobby","projectId":"prj_Utibu6dazejx6A8qDhJZwKqa3FCk","resourceConfig":{"buildMachine":{"defaultPurchaseType":"basic","purchaseType":"basic","machineSelectionType":"fixed","selectionSource":"plan-default"}},"projectSettings":{"buildCommand":null,"devCommand":null,"framework":"nextjs","commandForIgnoringBuildStep":null,"installCommand":null,"outputDirectory":null,"speedInsights":{"id":"MmsUq7aXooMzZXFqCrCtwaHCdsP","hasData":false},"webAnalytics":{"id":"qXrftwd5XJNfsNLvQoBYP7vie"},"nodeVersion":"24.x"},"routes":null,"config":{"version":1,"secureComputePrimaryRegion":null,"secureComputeFallbackRegion":null,"functionTimeout":300,"functionType":"fluid","functionMemoryType":"standard","isUsingActiveCPU":true,"resourceConfig":{"buildMachine":{"defaultPurchaseType":"basic","purchaseType":"basic","machineSelectionType":"fixed","selectionSource":"plan-default"},"buildQueue":{"configuration":"SKIP_NAMESPACE_QUEUE"}}}}
+[client-debug] 2026-09-25T05:04:21.114Z Deployment created
+[client-debug] 2026-09-25T05:04:21.114Z Yielding a 'created' event
+  Inspect         https://vercel.com/univharshs-projects/tarang-call-intelligence/5PLch77nT41ptYUA1EgJuumaUqcG
+  Production      https://tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app
+> [debug] [2026-09-25T05:04:21.179Z] Spinner invoked (Building…) with a 0ms delay
+> [debug] [2026-09-25T05:04:21.180Z] #2 → GET https://api.vercel.com/v3/now/deployments/dpl_5PLch77nT41ptYUA1EgJuumaUqcG/events?direction=forward&follow=1&format=lines&teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+[client-debug] 2026-09-25T05:04:21.180Z Waiting for deployment to be ready...
+[client-debug] 2026-09-25T05:04:21.181Z Waiting for builds and the deployment to complete...
+[client-debug] 2026-09-25T05:04:24.037Z Deployment state changed to BUILDING
+[client-debug] 2026-09-25T05:04:24.037Z Yielding a 'building' event
+> [debug] [2026-09-25T05:04:24.037Z] Spinner invoked (Building…) with a 0ms delay
+> [debug] [2026-09-25T05:04:25.676Z] #2 ← 200 OK: sfo1::fxf49-1790312662295-7c4bd23d7cfc [4.50s]
+> [debug] [2026-09-25T05:04:25.678Z] Spinner invoked (Running build in Washington, D.C., USA (East) – iad1) with a 0ms delay
+> [debug] [2026-09-25T05:04:25.678Z] Spinner invoked (Build machine configuration: 2 cores, 8 GB) with a 0ms delay
+> [debug] [2026-09-25T05:04:25.678Z] Spinner invoked (Retrieving list of deployment files...) with a 0ms delay
+> [debug] [2026-09-25T05:04:25.678Z] Spinner invoked (Previous build caches not available.) with a 0ms delay
+> [debug] [2026-09-25T05:04:25.678Z] Spinner invoked (Downloading 66 deployment files...) with a 0ms delay
+> [debug] [2026-09-25T05:04:26.699Z] Spinner invoked (Running "vercel build") with a 0ms delay
+> [debug] [2026-09-25T05:04:26.699Z] Spinner invoked (Vercel CLI 59.25.4) with a 0ms delay
+> [debug] [2026-09-25T05:04:26.699Z] Spinner invoked (Installing dependencies...) with a 0ms delay
+> [debug] [2026-09-25T05:04:29.874Z] Spinner invoked (npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (added 102 packages in 8s) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (19 packages are looking for funding) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (run `npm fund` for details) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts   @google/genai@2.18.0 (preinstall: echo 'preinstall: no-op')) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts   protobufjs@7.6.5 (postinstall: node scripts/postinstall)) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts   sharp@0.34.5 (install: node install/check.js || npm run build)) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.016Z] Spinner invoked (Detected Next.js version: 15.5.23) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (Running "npm run build") with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (> tarang-call-intelligence@1.0.0 build) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (> npm run corpus && next build) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (> tarang-call-intelligence@1.0.0 corpus) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (> node scripts/generate-corpus.mjs) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (corpus: 933 calls across 8 weeks, 17 scenarios) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (eval slice: 45 calls) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (intent mix: delivery_delay=190 damaged_or_spoiled=135 order_tracking=102 offer_not_applied=84 refund_status=82 return_pickup=59 wrong_or_missing_item=55 address_change=44 payment_failed=43 cancellation=39 quality_complaint=39 subscription_manage=35 feedback_positive=26) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (languages: hinglish, hindi, english) with a 0ms delay
+> [debug] [2026-09-25T05:04:36.017Z] Spinner invoked (containment: wk1=67%  wk8=84%) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.035Z] Spinner invoked (Attention: Next.js now collects completely anonymous telemetry regarding usage.) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.035Z] Spinner invoked (This information is used to shape Next.js' roadmap and prioritize features.) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.036Z] Spinner invoked (You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.036Z] Spinner invoked (https://nextjs.org/telemetry) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.036Z] Spinner invoked (▲ Next.js 15.5.23) with a 0ms delay
+> [debug] [2026-09-25T05:04:37.036Z] Spinner invoked (Creating an optimized production build ...) with a 0ms delay
+> [debug] [2026-09-25T05:04:50.455Z] Spinner invoked (✓ Compiled successfully in 10.3s) with a 0ms delay
+> [debug] [2026-09-25T05:04:50.455Z] Spinner invoked (Linting and checking validity of types ...) with a 0ms delay
+> [debug] [2026-09-25T05:04:53.551Z] Spinner invoked (Collecting page data ...) with a 0ms delay
+> [debug] [2026-09-25T05:04:55.646Z] Spinner invoked (Generating static pages (0/14) ...) with a 0ms delay
+> [debug] [2026-09-25T05:04:56.714Z] Spinner invoked (Generating static pages (3/14)) with a 0ms delay
+> [debug] [2026-09-25T05:04:56.714Z] Spinner invoked (Generating static pages (6/14)) with a 0ms delay
+> [debug] [2026-09-25T05:04:56.714Z] Spinner invoked (Generating static pages (10/14)) with a 0ms delay
+> [debug] [2026-09-25T05:04:56.715Z] Spinner invoked (✓ Generating static pages (14/14)) with a 0ms delay
+> [debug] [2026-09-25T05:04:57.714Z] Spinner invoked (Finalizing page optimization ...) with a 0ms delay
+> [debug] [2026-09-25T05:04:57.715Z] Spinner invoked (Collecting build traces ...) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.924Z] Spinner invoked (Route (app)                                 Size  First Load JS) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (┌ ○ /                                    6.78 kB         119 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /_not-found                            994 B         104 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ƒ /api/ask                               133 B         103 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ƒ /api/extract                           133 B         103 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ƒ /api/health                            133 B         103 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ƒ /api/voice-token                       133 B         103 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /ask                                 2.29 kB         117 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /asr                                 3.14 kB         106 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /calls                                2.6 kB         117 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /how                                 12.1 kB         115 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ ○ /live                                9.63 kB         122 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (└ ○ /signals                             2.19 kB         117 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (+ First Load JS shared by all             103 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ chunks/255-87552e6e05b8e3aa.js       46.4 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (└ other shared chunks (total)          2.06 kB) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.925Z] Spinner invoked (○  (Static)   prerendered as static content) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (ƒ  (Dynamic)  server-rendered on demand) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (Traced Next.js server files in: 71.504ms) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (Created all serverless functions in: 192.017ms) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (Collected static files (public/, static/, .next/static): 4.316ms) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (Build Completed in /vercel/output [35s]) with a 0ms delay
+> [debug] [2026-09-25T05:05:01.926Z] Spinner invoked (Deploying outputs...) with a 0ms delay
+[client-debug] 2026-09-25T05:05:05.849Z Deployment state changed to READY
+[client-debug] 2026-09-25T05:05:05.849Z Yielding a 'ready' event
+[2K[1A[2K[G  Production      https://tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app
+> [debug] [2026-09-25T05:05:05.849Z] Spinner invoked (Completing…) with a 0ms delay
+[client-debug] 2026-09-25T05:05:05.849Z Deployment alias assigned from event stream
+[client-debug] 2026-09-25T05:05:05.849Z Deployment is ready
+[client-debug] 2026-09-25T05:05:05.849Z Yielding a 'alias-assigned' event
+▲ Aliased         https://tarang-call-intelligence.vercel.app
+> [debug] [2026-09-25T05:05:05.907Z] #3 → GET https://api.vercel.com/v9/projects/prj_Utibu6dazejx6A8qDhJZwKqa3FCk?teamId=team_RmXqZEJPnXUDZyJffkoSctzv
+> [debug] [2026-09-25T05:05:06.745Z] #3 ← 200 OK: sfo1::bhgt6-1790312707527-96aa510ae2a2 [838ms]
+{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_5PLch77nT41ptYUA1EgJuumaUqcG",
+    "url": "https://tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app",
+    "inspectorUrl": "https://vercel.com/univharshs-projects/tarang-call-intelligence/5PLch77nT41ptYUA1EgJuumaUqcG",
+    "readyState": "READY",
+    "target": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_5PLch77nT41ptYUA1EgJuumaUqcG",
+    "buildMachine": {
+      "cores": 2,
+      "memory": 8192,
+      "machine": "basic",
+      "selectionType": "fixed",
+      "selectionSource": "plan-default"
+    }
+  },
+  "message": "Deployment tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel git connect --debug",
+      "when": "Automatically deploy changes on every push"
+    },
+    {
+      "command": "vercel curl https://tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app",
+      "when": "Verify deployment, including when Deployment Protection is enabled"
+    },
+    {
+      "command": "vercel inspect tarang-call-intelligence-ez37in5v4-univharshs-projects.vercel.app --debug",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod --debug",
+      "when": "Promote to production"
+    }
+  ]
+}
+> [debug] [2026-09-25T05:05:07.223Z] <claude-code-hint v="1" type="plugin" value="vercel@claude-plugins-official" />
+
+> [debug] [2026-09-25T05:05:07.231Z] Vercel CLI 60.0.1 (Node.js 22.20.0)
+
+> [debug] [2026-09-25T05:05:08.775Z] Telemetry subprocess killed due to timeout
+> [debug] [2026-09-25T05:05:08.788Z] Telemetry subprocess exited with code null

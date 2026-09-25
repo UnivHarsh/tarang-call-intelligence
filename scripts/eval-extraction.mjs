@@ -273,13 +273,37 @@ async function main() {
     `Product signal: precision ${(precision * 100).toFixed(0)}%, recall ${(recall * 100).toFixed(0)}% over ${usable.length} calls. Scored separately from the table because correctly declining to raise a signal matters as much as raising one.`,
   ];
   if (failed) notes.push(`${failed} call${failed === 1 ? "" : "s"} errored and were excluded.`);
+  /*
+   * Which model actually answered, per call.
+   *
+   * The extraction route walks a chain of models when one is saturated, so
+   * asking for Flash and recording "Flash" is an assumption, not a measurement.
+   * A run where two thirds of the calls quietly landed on a lighter model is
+   * not the benchmark anyone thinks they are reading, so the distribution is
+   * recorded and the headline name is whichever model served the most calls.
+   */
+  const servedBy = {};
+  for (const r of modelRuns) {
+    const m = r.llm.model || "unknown";
+    servedBy[m] = (servedBy[m] || 0) + 1;
+  }
+  const servedTop = Object.entries(servedBy).sort((a, b) => b[1] - a[1])[0]?.[0] || "unknown";
+  if (Object.keys(servedBy).length > 1) {
+    notes.push(
+      "Served by more than one model: " +
+      Object.entries(servedBy).sort((a, b) => b[1] - a[1]).map(([m, n]) => `${m} ${n}`).join(", ") +
+      ". The route falls back when a model is saturated, so the column is a mix rather than one model.",
+    );
+  }
+
   if (modelRuns.length < usable.length) {
     notes.push(`${usable.length - modelRuns.length} call(s) fell back to the rules engine mid-run and are scored in the model column as such.`);
   }
 
   const out = {
     ranAt: new Date().toISOString(),
-    model: modelRuns[0].llm.model || "unknown",
+    model: servedTop,
+    servedBy,
     n: usable.length,
     fields: scored,
     meanLatencyMs,
