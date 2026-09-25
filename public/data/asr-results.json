@@ -616,5 +616,78 @@
     "References come from a synthetic corpus, so the vocabulary is narrower and more consistent than real customer speech.",
     "A handful of synthetic voices, no real speakers. Real Indic ASR performance varies enormously by speaker, accent and region, and none of it is captured here.",
     "Transliteration is rule-based, so the script stage removes most but not all of the Devanagari penalty. The residue is counted against the recogniser, which is the conservative direction to be wrong in."
-  ]
+  ],
+  "realVoice": {
+    "ranAt": "2026-09-25T06:28:10.816Z",
+    "lines": 8,
+    "recorded": 10,
+    "systems": [
+      {
+        "id": "naive",
+        "label": "Flash-Lite, plain instruction",
+        "n": 8,
+        "wer": 0.2857142857142857,
+        "werRaw": 0.4797297297297297,
+        "cer": 0.18199848670780716
+      },
+      {
+        "id": "codemix",
+        "label": "Flash-Lite, code-mix instruction",
+        "n": 8,
+        "wer": 0.24489795918367346,
+        "werRaw": 0.43243243243243246,
+        "cer": 0.1394455090594764
+      },
+      {
+        "id": "devanagari",
+        "label": "Flash-Lite, Devanagari requested",
+        "n": 8,
+        "wer": 0.3945578231292517,
+        "werRaw": 0.75,
+        "cer": 0.1971090600665878
+      }
+    ],
+    "examples": [
+      {
+        "callId": "c_0068",
+        "reference": "Return pickup 2 baar schedule ho chuka hai par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail.",
+        "heard": {
+          "naive": "Return pickup do bar schedule ho chuka hai, par koi aya hi nahi. Har bar SMS ata hai ki attempt fail.",
+          "codemix": "Return pickup do bar schedule ho chuka hai, par koi aaya hi nahi. Har bar SMS aata hai ki attempt fail.",
+          "devanagari": "Return pickup do baar schedule ho chuka hai par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail."
+        }
+      },
+      {
+        "callId": "c_0018",
+        "reference": "4-5, sab theek tha. Delivery boy bhi polite tha.",
+        "heard": {
+          "naive": "चार-पाँच सब ठीक था, डिलीवरी बॉय भी पोलाइट था।",
+          "codemix": "char paanch sab theek tha delivery boy bhi polite tha",
+          "devanagari": "चार पांच सब ठीक था डिलीवरी बॉय भी पोलाइट था"
+        }
+      }
+    ],
+    "offScript": [
+      {
+        "callId": "c_0072",
+        "reference": "Haan, mera order abhi tak nahi aaya. 1 din ho gaye promised date se.",
+        "heard": {
+          "naive": "हां मेरा आर्डर अभी तक नहीं आया। एक दिन हो गया है प्रॉमिस डेट से लाइक 18 तारीख को आने को था। बट आज लेट हो गया है अब।",
+          "codemix": "haan mera order abhi tak nahi aaya ek din ho gaya hai promised date se like 18 tareek ko aane ko tha but aaj late ho gaya hai ab",
+          "devanagari": "हाँ मेरा आर्डर अभी तक नहीं आया। एक दिन हो गया है प्रॉमिस डेट से लाइक 18 तारीख को आने को था। बट आज लेट हो गया है अब।"
+        },
+        "ratio": 2.07
+      },
+      {
+        "callId": "c_0034",
+        "reference": "Bas ye jaanna tha ki mera order kahan tak pahuncha hai.",
+        "heard": {
+          "naive": "Bas Ye Janna Hai Ki Mera Order Kaha Tak Pahuche Hai. Kyuki Mujhe App Me Samaj Nahi Aa Raha Hai Ki Mera Order Kaha Par Hai.",
+          "codemix": "Bas yeh jaanna tha ki mera order kahaan tak pahunche hai, kyunki mujhe app mein samajh nahi aa raha hai ki mera order kahaan par hai.",
+          "devanagari": "बस ये जानना था कि मेरा आर्डर कहां तक पहुंचा है क्योंकि मुझे ऐप में समझ नहीं आ रहा है कि मेरा आर्डर कहां पर है।"
+        },
+        "ratio": 2.36
+      }
+    ]
+  }
 }

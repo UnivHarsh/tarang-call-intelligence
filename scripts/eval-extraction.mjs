@@ -250,6 +250,30 @@ async function main() {
     process.exit(1);
   }
 
+  /*
+   * Which wrong answer, not just how often.
+   *
+   * "resolution: 40%" is a number you can stare at forever. "it says
+   * info_provided 11 times when the truth was callback_promised" is a sentence
+   * that tells you what to change in the prompt. Confusions are recorded for
+   * the categorical fields only, since a near-miss on a risk score is not a
+   * confusion, it is a rounding difference.
+   */
+  const confusions = {};
+  for (const f of FIELDS) {
+    if (f.kind !== "exact") continue;
+    const pairs = {};
+    for (const r of usable) {
+      const truth = r.truth[f.key];
+      const got = r.llm.insight[f.key];
+      if (agrees(f, got, truth)) continue;
+      const k = `${truth} -> ${got}`;
+      pairs[k] = (pairs[k] || 0) + 1;
+    }
+    const top = Object.entries(pairs).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    if (top.length) confusions[f.key] = top.map(([k, n]) => ({ pair: k, n }));
+  }
+
   const scored = FIELDS.map((f) => {
     const llmHits = usable.filter((r) => agrees(f, r.llm.insight[f.key], r.truth[f.key])).length;
     const ruleHits = usable.filter((r) => agrees(f, r.rules.insight[f.key], r.truth[f.key])).length;
@@ -304,6 +328,7 @@ async function main() {
     ranAt: new Date().toISOString(),
     model: servedTop,
     servedBy,
+    confusions,
     n: usable.length,
     fields: scored,
     meanLatencyMs,
@@ -323,6 +348,15 @@ async function main() {
   }
   console.log(`\nproduct signal       precision ${(precision * 100).toFixed(0)}%  recall ${(recall * 100).toFixed(0)}%`);
   console.log(`mean latency ${Math.round(meanLatencyMs)}ms   mean cost $${meanCostUsd.toFixed(4)}/call`);
+  const confKeys = Object.keys(confusions);
+  if (confKeys.length) {
+    console.log("\nwhere the model goes wrong  (truth -> predicted)");
+    for (const k of confKeys) {
+      console.log(`  ${k}`);
+      for (const c of confusions[k]) console.log(`    ${String(c.n).padStart(3)}x  ${c.pair}`);
+    }
+  }
+
   console.log(`\nWrote public/data/eval-results.json — the How it works page now shows these numbers.`);
 }
 

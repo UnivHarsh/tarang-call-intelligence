@@ -1,18 +1,14 @@
 {
-  "ranAt": "2026-09-25T05:58:25.017Z",
+  "ranAt": "2026-09-25T06:38:46.813Z",
   "model": "gemini-3.5-flash-lite",
   "servedBy": {
-    "gemini-3.5-flash-lite": 45
+    "gemini-3.5-flash-lite": 33
   },
   "confusions": {
     "primaryIntent": [
       {
         "pair": "delivery_delay -> order_tracking",
-        "n": 4
-      },
-      {
-        "pair": "quality_complaint -> damaged_or_spoiled",
-        "n": 3
+        "n": 2
       }
     ],
     "rootCause": [
@@ -21,40 +17,44 @@
         "n": 3
       },
       {
-        "pair": "customer_expectation -> supplier_quality",
-        "n": 1
-      },
-      {
-        "pair": "logistics_3pl -> supplier_quality",
-        "n": 1
-      },
-      {
         "pair": "logistics_3pl -> warehouse_pick_error",
+        "n": 3
+      },
+      {
+        "pair": "customer_expectation -> supplier_quality",
+        "n": 2
+      },
+      {
+        "pair": "customer_expectation -> logistics_3pl",
         "n": 1
       }
     ],
     "resolution": [
       {
-        "pair": "escalated_human -> info_provided",
-        "n": 5
+        "pair": "info_provided -> resolved_self_serve",
+        "n": 7
       },
       {
         "pair": "resolved_self_serve -> info_provided",
-        "n": 4
+        "n": 6
       },
       {
         "pair": "escalated_human -> refund_initiated",
         "n": 3
       },
       {
-        "pair": "info_provided -> resolved_self_serve",
+        "pair": "escalated_human -> resolved_self_serve",
         "n": 3
       }
     ],
     "resolved": [
       {
         "pair": "false -> true",
-        "n": 18
+        "n": 15
+      },
+      {
+        "pair": "true -> false",
+        "n": 1
       }
     ],
     "contained": [
@@ -66,10 +66,6 @@
     "refundRequested": [
       {
         "pair": "true -> false",
-        "n": 2
-      },
-      {
-        "pair": "false -> true",
         "n": 1
       }
     ]
@@ -78,22 +74,22 @@
   "fields": [
     {
       "field": "primaryIntent",
-      "llm": 0.8444444444444444,
+      "llm": 0.9555555555555556,
       "rules": 1
     },
     {
       "field": "rootCause",
-      "llm": 0.8666666666666667,
+      "llm": 0.8,
       "rules": 1
     },
     {
       "field": "resolution",
-      "llm": 0.37777777777777777,
+      "llm": 0.24444444444444444,
       "rules": 0.4222222222222222
     },
     {
       "field": "resolved",
-      "llm": 0.6,
+      "llm": 0.6444444444444445,
       "rules": 0.5777777777777777
     },
     {
@@ -103,12 +99,12 @@
     },
     {
       "field": "refundRequested",
-      "llm": 0.9333333333333333,
+      "llm": 0.9777777777777777,
       "rules": 0.8444444444444444
     },
     {
       "field": "csatPredicted",
-      "llm": 0.8,
+      "llm": 0.8888888888888888,
       "rules": 0.8
     },
     {
@@ -118,13 +114,14 @@
     },
     {
       "field": "churnRisk",
-      "llm": 1,
+      "llm": 0.9111111111111111,
       "rules": 0.8666666666666667
     }
   ],
-  "meanLatencyMs": 3352.311111111111,
-  "meanCostUsd": 0.0015688444444444446,
+  "meanLatencyMs": 5925.969696969697,
+  "meanCostUsd": 0.0015596363636363637,
   "notes": [
-    "Product signal: precision 36%, recall 100% over 45 calls. Scored separately from the table because correctly declining to raise a signal matters as much as raising one."
+    "Product signal: precision 23%, recall 50% over 45 calls. Scored separately from the table because correctly declining to raise a signal matters as much as raising one.",
+    "12 call(s) fell back to the rules engine mid-run and are scored in the model column as such."
   ]
 }

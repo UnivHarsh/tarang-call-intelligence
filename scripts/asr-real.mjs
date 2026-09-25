@@ -133,6 +133,23 @@ async function main() {
 
   const pairs = Object.fromEntries(SYSTEMS.map((s) => [s.id, []]));
   const examples = [];
+  const offScript = [];
+
+  /*
+   * Reference and audio have to actually match.
+   *
+   * A human reading a script adds words. Two of the first ten recordings here
+   * were ad-libbed: the speaker said the line and then kept talking. Every
+   * system transcribed that correctly and scored above 120%, because the
+   * reference was wrong, not the recogniser. Reporting those as recognition
+   * errors would be publishing a bookkeeping mistake as a finding.
+   *
+   * Detection is deliberately blunt and conservative: if every system returns
+   * far more words than the reference contains, they all heard something the
+   * script does not have. Systems disagreeing with each other is a model
+   * problem; systems agreeing that there is more audio is a script problem.
+   */
+  const wordCount = (t) => String(t).trim().split(/\s+/).filter(Boolean).length;
 
   for (let i = 0; i < found.length; i++) {
     const l = found[i];
@@ -148,6 +165,18 @@ async function main() {
       }
       await sleep(1500);
     }
+    const refWords = wordCount(l.text);
+    const ratios = Object.values(heard).map((t) => wordCount(t) / Math.max(1, refWords));
+    const drift = ratios.length ? Math.min(...ratios) : 0;
+
+    if (drift > 1.35) {
+      // Every system heard at least a third more words than the script holds.
+      offScript.push({ callId: l.callId, reference: l.text, heard, ratio: Number(drift.toFixed(2)) });
+      for (const s of SYSTEMS) pairs[s.id].pop();
+      console.log(`  ${String(i + 1).padStart(2)}/${found.length}  ${yellow("off script")} ${dim(`spoke ${drift.toFixed(1)}x the words, excluded`)}`);
+      continue;
+    }
+
     const summary = SYSTEMS.filter((s) => heard[s.id] !== undefined)
       .map((s) => `${s.id} ${pct(ladder(l.text, heard[s.id]).at(-1).wer)}`)
       .join("  ");
@@ -168,7 +197,14 @@ async function main() {
 
   const resultsPath = path.join(DATA, "asr-results.json");
   const results = JSON.parse(fs.readFileSync(resultsPath, "utf8"));
-  results.realVoice = { ranAt: new Date().toISOString(), lines: found.length, systems, examples };
+  results.realVoice = {
+    ranAt: new Date().toISOString(),
+    lines: found.length - offScript.length,
+    recorded: found.length,
+    systems,
+    examples,
+    offScript,
+  };
   fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2));
 
   console.log(`\n${bold("  system                            raw    normalised")}`);
