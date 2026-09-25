@@ -12,3 +12,10 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# working files, not part of the project
+*.log
+probe.wav
+public/data/eval-flashlite.json
+real-audio/*
+!real-audio/SCRIPT.txt
