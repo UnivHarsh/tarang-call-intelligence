@@ -1,0 +1,620 @@
+{
+  "ranAt": "2026-09-24T20:44:17.208Z",
+  "lines": 20,
+  "voices": [
+    "gemini-2.5-flash-preview-tts / Aoede",
+    "gemini-2.5-flash-preview-tts / Charon",
+    "gemini-3.1-flash-tts-preview / Kore",
+    "gemini-3.8-flash-tts / Puck"
+  ],
+  "stages": [
+    {
+      "key": "raw",
+      "label": "Raw",
+      "note": "No normalisation at all"
+    },
+    {
+      "key": "case",
+      "label": "Case",
+      "note": "Lowercased, whitespace collapsed"
+    },
+    {
+      "key": "punct",
+      "label": "Punctuation",
+      "note": "Punctuation stripped"
+    },
+    {
+      "key": "script",
+      "label": "Script",
+      "note": "Devanagari transliterated to Roman"
+    },
+    {
+      "key": "spelling",
+      "label": "Spelling",
+      "note": "Hinglish variants collapsed"
+    },
+    {
+      "key": "numbers",
+      "label": "Numbers",
+      "note": "Spoken numerals as digits"
+    },
+    {
+      "key": "entities",
+      "label": "Entities",
+      "note": "Order ids and amounts normalised"
+    },
+    {
+      "key": "fillers",
+      "label": "Fillers",
+      "note": "Discourse markers dropped"
+    }
+  ],
+  "systems": [
+    {
+      "id": "naive",
+      "label": "Flash-Lite, plain instruction",
+      "model": "gemini-3.5-flash-lite",
+      "note": "The instruction most people write first.",
+      "prompt": "Transcribe this audio.",
+      "n": 20,
+      "byStage": [
+        {
+          "stage": "raw",
+          "wer": 0.3404255319148936,
+          "sub": 104,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "case",
+          "wer": 0.3069908814589666,
+          "sub": 93,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "punct",
+          "wer": 0.24316109422492402,
+          "sub": 72,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "script",
+          "wer": 0.182370820668693,
+          "sub": 52,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "spelling",
+          "wer": 0.1641337386018237,
+          "sub": 46,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "numbers",
+          "wer": 0.1519756838905775,
+          "sub": 42,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "entities",
+          "wer": 0.14893617021276595,
+          "sub": 41,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "fillers",
+          "wer": 0.14329268292682926,
+          "sub": 40,
+          "del": 2,
+          "ins": 5
+        }
+      ],
+      "wer": 0.14329268292682926,
+      "werRaw": 0.3404255319148936,
+      "cer": 0.05651091176901196,
+      "devanagariShare": 0.15,
+      "meanLatencyMs": 1967.35,
+      "unavailable": null
+    },
+    {
+      "id": "codemix",
+      "label": "Flash-Lite, code-mix instruction",
+      "model": "gemini-3.5-flash-lite",
+      "note": "Same model, same audio. Only the instruction changes.",
+      "prompt": "Transcribe this Indian customer-support audio verbatim. The speech is code-mixed Hindi and English. Write Hindi words in Roman script, not Devanagari. Keep English words in English. Preserve order IDs and amounts exactly as spoken. Output only the transcript, no commentary.",
+      "n": 20,
+      "byStage": [
+        {
+          "stage": "raw",
+          "wer": 0.22796352583586627,
+          "sub": 64,
+          "del": 2,
+          "ins": 9
+        },
+        {
+          "stage": "case",
+          "wer": 0.19756838905775076,
+          "sub": 54,
+          "del": 2,
+          "ins": 9
+        },
+        {
+          "stage": "punct",
+          "wer": 0.1337386018237082,
+          "sub": 33,
+          "del": 2,
+          "ins": 9
+        },
+        {
+          "stage": "script",
+          "wer": 0.1337386018237082,
+          "sub": 33,
+          "del": 2,
+          "ins": 9
+        },
+        {
+          "stage": "spelling",
+          "wer": 0.1276595744680851,
+          "sub": 31,
+          "del": 2,
+          "ins": 9
+        },
+        {
+          "stage": "numbers",
+          "wer": 0.1033434650455927,
+          "sub": 26,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "entities",
+          "wer": 0.1033434650455927,
+          "sub": 26,
+          "del": 2,
+          "ins": 6
+        },
+        {
+          "stage": "fillers",
+          "wer": 0.0975609756097561,
+          "sub": 25,
+          "del": 2,
+          "ins": 5
+        }
+      ],
+      "wer": 0.0975609756097561,
+      "werRaw": 0.22796352583586627,
+      "cer": 0.032928139417339165,
+      "devanagariShare": 0,
+      "meanLatencyMs": 2366.3,
+      "unavailable": null
+    },
+    {
+      "id": "devanagari",
+      "label": "Flash-Lite, Devanagari requested",
+      "model": "gemini-3.5-flash-lite",
+      "note": "The control. Same model, same audio, script deliberately flipped, to show how much of a WER number is the scoring convention rather than the recogniser.",
+      "prompt": "Transcribe this Indian customer-support audio verbatim. The speech is code-mixed Hindi and English. Write the Hindi words in Devanagari script. Preserve order IDs and amounts exactly as spoken. Output only the transcript, no commentary.",
+      "n": 20,
+      "byStage": [
+        {
+          "stage": "raw",
+          "wer": 0.8844984802431611,
+          "sub": 280,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "case",
+          "wer": 0.8753799392097265,
+          "sub": 277,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "punct",
+          "wer": 0.8662613981762918,
+          "sub": 274,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "script",
+          "wer": 0.47720364741641336,
+          "sub": 146,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "spelling",
+          "wer": 0.39209726443769,
+          "sub": 118,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "numbers",
+          "wer": 0.3768996960486322,
+          "sub": 113,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "entities",
+          "wer": 0.3768996960486322,
+          "sub": 113,
+          "del": 1,
+          "ins": 10
+        },
+        {
+          "stage": "fillers",
+          "wer": 0.375,
+          "sub": 113,
+          "del": 1,
+          "ins": 9
+        }
+      ],
+      "wer": 0.375,
+      "werRaw": 0.8844984802431611,
+      "cer": 0.13960714506158844,
+      "devanagariShare": 0.9,
+      "meanLatencyMs": 1470.7,
+      "unavailable": null
+    }
+  ],
+  "examples": [
+    {
+      "clip": "/audio/line-01.wav",
+      "callId": "c_0068",
+      "reference": "Return pickup 2 baar schedule ho chuka hai par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail.",
+      "heard": {
+        "naive": "Return pickup do bar schedule ho chuka hai, par koi aaya hi nahi. Har bar SMS aata hai ki attempt fail.",
+        "codemix": "Return pickup do baar schedule ho chuka hai, par koi aaya hi nahi. Har baar SMS aata hai ki attempt fail.",
+        "devanagari": "रिटर्न पिकअप दो बार स्केड्यूल हो चुका है, पर कोई आया ही नहीं। हर बार एसएमएस आता है कि अटेम्प्ट फेल।"
+      },
+      "ladders": {
+        "naive": [
+          {
+            "stage": "raw",
+            "wer": 0.19047619047619047
+          },
+          {
+            "stage": "case",
+            "wer": 0.19047619047619047
+          },
+          {
+            "stage": "punct",
+            "wer": 0.14285714285714285
+          },
+          {
+            "stage": "script",
+            "wer": 0.14285714285714285
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.047619047619047616
+          },
+          {
+            "stage": "numbers",
+            "wer": 0
+          },
+          {
+            "stage": "entities",
+            "wer": 0
+          },
+          {
+            "stage": "fillers",
+            "wer": 0
+          }
+        ],
+        "codemix": [
+          {
+            "stage": "raw",
+            "wer": 0.09523809523809523
+          },
+          {
+            "stage": "case",
+            "wer": 0.09523809523809523
+          },
+          {
+            "stage": "punct",
+            "wer": 0.047619047619047616
+          },
+          {
+            "stage": "script",
+            "wer": 0.047619047619047616
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.047619047619047616
+          },
+          {
+            "stage": "numbers",
+            "wer": 0
+          },
+          {
+            "stage": "entities",
+            "wer": 0
+          },
+          {
+            "stage": "fillers",
+            "wer": 0
+          }
+        ],
+        "devanagari": [
+          {
+            "stage": "raw",
+            "wer": 1
+          },
+          {
+            "stage": "case",
+            "wer": 1
+          },
+          {
+            "stage": "punct",
+            "wer": 1
+          },
+          {
+            "stage": "script",
+            "wer": 0.5238095238095238
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.38095238095238093
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "entities",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.3333333333333333
+          }
+        ]
+      }
+    },
+    {
+      "clip": "/audio/line-02.wav",
+      "callId": "c_0018",
+      "reference": "4-5, sab theek tha. Delivery boy bhi polite tha.",
+      "heard": {
+        "naive": "Faltik tha delivery boy bhi polite tha.",
+        "codemix": "5 theek tha, delivery boy bhi polite tha.",
+        "devanagari": "5 ठीक था। डिलीवरी बॉय भी पोलाइट था।"
+      },
+      "ladders": {
+        "naive": [
+          {
+            "stage": "raw",
+            "wer": 0.5555555555555556
+          },
+          {
+            "stage": "case",
+            "wer": 0.4444444444444444
+          },
+          {
+            "stage": "punct",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "script",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "entities",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.3333333333333333
+          }
+        ],
+        "codemix": [
+          {
+            "stage": "raw",
+            "wer": 0.4444444444444444
+          },
+          {
+            "stage": "case",
+            "wer": 0.3333333333333333
+          },
+          {
+            "stage": "punct",
+            "wer": 0.2222222222222222
+          },
+          {
+            "stage": "script",
+            "wer": 0.2222222222222222
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.2222222222222222
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.2222222222222222
+          },
+          {
+            "stage": "entities",
+            "wer": 0.2222222222222222
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.2222222222222222
+          }
+        ],
+        "devanagari": [
+          {
+            "stage": "raw",
+            "wer": 1
+          },
+          {
+            "stage": "case",
+            "wer": 1
+          },
+          {
+            "stage": "punct",
+            "wer": 1
+          },
+          {
+            "stage": "script",
+            "wer": 0.7777777777777778
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.6666666666666666
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.6666666666666666
+          },
+          {
+            "stage": "entities",
+            "wer": 0.6666666666666666
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.6666666666666666
+          }
+        ]
+      }
+    },
+    {
+      "clip": "/audio/line-03.wav",
+      "callId": "c_0094",
+      "reference": "Aapne SMS bheja tha 30% off ka, par cart mein lag nahi raha.",
+      "heard": {
+        "naive": "Aapne SMS bheja tha 30% off ka par cart me lag nahi raha.",
+        "codemix": "Aapne SMS bheja tha 30% off ka, par cart mein lag nahi raha.",
+        "devanagari": "आपने SMS भेजा था 30% off का, पर कार्ट में लग नहीं रहा।"
+      },
+      "ladders": {
+        "naive": [
+          {
+            "stage": "raw",
+            "wer": 0.15384615384615385
+          },
+          {
+            "stage": "case",
+            "wer": 0.15384615384615385
+          },
+          {
+            "stage": "punct",
+            "wer": 0.07692307692307693
+          },
+          {
+            "stage": "script",
+            "wer": 0.07692307692307693
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.07692307692307693
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.07692307692307693
+          },
+          {
+            "stage": "entities",
+            "wer": 0.07692307692307693
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.07692307692307693
+          }
+        ],
+        "codemix": [
+          {
+            "stage": "raw",
+            "wer": 0
+          },
+          {
+            "stage": "case",
+            "wer": 0
+          },
+          {
+            "stage": "punct",
+            "wer": 0
+          },
+          {
+            "stage": "script",
+            "wer": 0
+          },
+          {
+            "stage": "spelling",
+            "wer": 0
+          },
+          {
+            "stage": "numbers",
+            "wer": 0
+          },
+          {
+            "stage": "entities",
+            "wer": 0
+          },
+          {
+            "stage": "fillers",
+            "wer": 0
+          }
+        ],
+        "devanagari": [
+          {
+            "stage": "raw",
+            "wer": 0.7692307692307693
+          },
+          {
+            "stage": "case",
+            "wer": 0.7692307692307693
+          },
+          {
+            "stage": "punct",
+            "wer": 0.7692307692307693
+          },
+          {
+            "stage": "script",
+            "wer": 0.38461538461538464
+          },
+          {
+            "stage": "spelling",
+            "wer": 0.3076923076923077
+          },
+          {
+            "stage": "numbers",
+            "wer": 0.3076923076923077
+          },
+          {
+            "stage": "entities",
+            "wer": 0.3076923076923077
+          },
+          {
+            "stage": "fillers",
+            "wer": 0.3076923076923077
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Audio is text to speech, not a phone line. No background noise, no codec loss, no overlapping speech, no accent variation. Every rate here is a floor on the error a real deployment would see.",
+    "References come from a synthetic corpus, so the vocabulary is narrower and more consistent than real customer speech.",
+    "A handful of synthetic voices, no real speakers. Real Indic ASR performance varies enormously by speaker, accent and region, and none of it is captured here.",
+    "Transliteration is rule-based, so the script stage removes most but not all of the Devanagari penalty. The residue is counted against the recogniser, which is the conservative direction to be wrong in."
+  ]
+}

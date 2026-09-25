@@ -31,7 +31,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const DATA = path.join(ROOT, "public", "data");
 const LIMIT = Number(process.env.TARANG_EVAL_N || 0);
-const CONCURRENCY = 4;
+// Free-tier request-per-minute limits are low, and a burst of 429s makes the
+// route fall back to the keyword engine. When that happens the 'model' column
+// is quietly measuring the baseline against itself, which is worse than no
+// number at all. One at a time is slower and is the only honest setting here.
+const CONCURRENCY = Number(process.env.TARANG_EVAL_CONCURRENCY || 1);
+const THROTTLE_MS = Number(process.env.TARANG_EVAL_THROTTLE_MS || 1200);
 
 /** Port used when this script has to bring up its own server. */
 const OWN_PORT = 3123;
@@ -131,13 +136,41 @@ function agrees(field, predicted, truth) {
   return Math.abs(Number(predicted) - Number(truth)) <= field.tolerance;
 }
 
-async function extract(transcript, meta, forceLocal) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Calls the extraction route, and on a model-column run retries when the route
+ * comes back served by the keyword engine.
+ *
+ * The route is built to degrade rather than fail, which is right in production
+ * and wrong in an eval: a silent substitution turns the comparison into the
+ * baseline scored against itself. Here a fallback is treated as a transient
+ * failure and retried with backoff, and only a persistent one is recorded.
+ */
+async function extract(transcript, meta, forceLocal, attempts = 3) {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await sleep(2000 * i);
+    const res = await fetch(`${BASE}/api/extract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript, ...meta, forceLocal }),
+    });
+    if (!res.ok) {
+      last = new Error(`${res.status} ${await res.text()}`);
+      continue;
+    }
+    const json = await res.json();
+    if (forceLocal || json.model) return json; // served by the model, or we asked for rules
+    last = new Error("served by the rules engine");
+  }
+  if (last && !String(last.message).includes("rules engine")) throw last;
+  // Persistent fallback: return it, flagged, so the run is still counted honestly.
   const res = await fetch(`${BASE}/api/extract`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ transcript, ...meta, forceLocal }),
   });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json();
 }
 
@@ -153,6 +186,7 @@ async function mapLimit(items, limit, fn) {
         } catch (e) {
           out[i] = { error: e instanceof Error ? e.message : String(e) };
         }
+        if (THROTTLE_MS > 0) await sleep(THROTTLE_MS);
       }
     }),
   );

@@ -31,6 +31,7 @@ Overall predicted CSAT stays flat across all eight weeks. That is deliberate —
 | **Calls** | All 933 calls, filterable, with the full extracted record and transcript per call |
 | **Live demo** | Actually talk to the agent out loud, or replay a call, or paste a transcript — all three run the same extraction |
 | **Ask** | Plain-English questions over the corpus, answered with citations to individual calls |
+| **Speech accuracy** | Word error rate across three recognition setups, and how much of it is the scoring convention rather than the recogniser |
 | **How it works** | Architecture, the actual prompt and schema, unit economics, the eval, and what I would not claim |
 
 ## Running it
@@ -118,6 +119,39 @@ npm run eval
 It reuses a dev server if one is running and otherwise starts and stops its own, so it really is one command.
 
 It writes `public/data/eval-results.json`, and the How it works page renders the table automatically. Scoring against a baseline rather than against chance is the whole point: "91% on intent" means little until you know regexes get 62%.
+
+## How wrong is the transcript?
+
+Every page except one treats the transcript as a given. It is not. It is a model
+output, and on code-mixed Hindi and English it is the weakest link in the chain.
+The **Speech accuracy** page measures it.
+
+```bash
+npm run asr
+```
+
+Lines are taken from the corpus, where the exact words are already known, spoken
+by a text-to-speech model, and sent as identical audio to three recognition
+setups. All three use the same model with the same decoding settings. Only the
+instruction changes, so any difference in the table is attributable to the prompt
+and to nothing else. The third arm asks for Devanagari on purpose: it is not a
+setup anyone would ship, it is the control.
+
+**Word error rate on Indic speech is partly a statement about your scoring
+convention.** A perfectly correct transcript written in Devanagari, scored
+against a Roman reference, is 100% wrong. So every pair is scored eight times,
+adding one normalisation at a time — case, punctuation, script, Hinglish spelling
+variants, spoken numbers, order ids, fillers — and the report shows the rate at
+each step. A line that falls steeply was never failing at recognition. A line
+that stays flat is the honest error.
+
+Two things worth knowing about the numbers. The audio is synthetic, so it has
+none of the noise, codec loss or overlapping speech of a phone line and every
+rate is a floor rather than an estimate. And the first run of this benchmark
+reported error rates above 300%, because the text-to-speech model was handed the
+instruction along with the line and read the instruction out loud. A rate that
+absurd is a bug report, not a finding; it was caught by reading the transcripts
+rather than trusting the metric.
 
 ## Some decisions worth arguing with
 

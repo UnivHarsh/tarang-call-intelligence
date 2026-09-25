@@ -115,7 +115,22 @@ if (!key) {
   }
 }
 
-writeEnvLocal({ ...existing, GEMINI_API_KEY: key });
+// --- voice layer (optional) -------------------------------------------------
+// The site works without this: the live page falls back to Gemini Live and to
+// transcript replay. With it, the "talk to the agent" button runs on a real
+// telephony-grade voice stack, which is what makes the demo worth clicking.
+let vapi = existing.NEXT_PUBLIC_VAPI_PUBLIC_KEY || "";
+if (vapi) {
+  console.log(`  Found a Vapi public key ending ${dim("..." + vapi.slice(-4))}`);
+} else {
+  console.log(`  ${bold("Optional:")} a Vapi public key turns on the live voice demo.`);
+  console.log(`  Free credits at ${bold("https://vapi.ai")} > Dashboard > API Keys > Public key.`);
+  console.log(dim("  Press Enter to skip. You can re-run npm run setup later to add it.\n"));
+  vapi = (await ask("  Paste the Vapi PUBLIC key (or Enter to skip): ")).trim();
+}
+console.log("");
+
+writeEnvLocal({ ...existing, GEMINI_API_KEY: key, NEXT_PUBLIC_VAPI_PUBLIC_KEY: vapi });
 console.log(`\n  ${green("✓")} Wrote .env.local ${dim("(gitignored — this never gets committed)")}\n`);
 
 // --- verify -----------------------------------------------------------------

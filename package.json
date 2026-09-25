@@ -13,7 +13,8 @@
     "corpus": "node scripts/generate-corpus.mjs",
     "eval": "node scripts/eval-extraction.mjs",
     "check-key": "node scripts/check-key.mjs",
-    "lint": "next lint"
+    "lint": "next lint",
+    "asr": "node scripts/asr-bench.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.18.0",
